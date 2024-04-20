@@ -96,10 +96,12 @@ for mf in tqdm(movie_full):
         mf = ts_input_generator(mf)
     training_set_input.append(mf)
 del(movie_full)
-training_set_input_cpu = []
-for i in range(len(training_set_input)):
-    training_set_input_cpu.append(training_set_input[i].cpu()) # copy it back to the cpu
-del(training_set_input) # remove it from the gpu
+if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
+    training_set_input_cpu = []
+    for i in range(len(training_set_input)):
+        training_set_input_cpu.append(training_set_input[i].cpu()) # copy it back to the cpu
+    del(training_set_input) # remove it from the gpu
+    training_set_input = training_set_input_cpu # rename
 
 for mo in tqdm(movie_obs):
     mo = np.transpose(mo, [2, 0, 1])
@@ -108,16 +110,18 @@ for mo in tqdm(movie_obs):
         mo = ts_ground_generator(mo)
     training_set_ground.append(mo)
 del(movie_obs)
-training_set_ground_cpu = []
-for i in range(len(training_set_ground)):
-    training_set_ground_cpu.append(training_set_ground[i].cpu()) # copy it back to the cpu
-del(training_set_ground) # remove it from the gpu
+if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
+    training_set_ground_cpu = []
+    for i in range(len(training_set_ground)):
+        training_set_ground_cpu.append(training_set_ground[i].cpu()) # copy it back to the cpu
+    del(training_set_ground) # remove it from the gpu
+    training_set_ground = training_set_ground_cpu
 
-print('input shape', training_set_input_cpu[0].shape)
-print('ground shape', training_set_ground_cpu[0].shape)
+print('input shape', training_set_input[0].shape)
+print('ground shape', training_set_ground[0].shape)
 
 from kernel_operations import transfer
-trained_conv_weight, trained_conv_bias = transfer(conv_stage1_kernels, training_set_input_cpu, training_set_ground_cpu)
+trained_conv_weight, trained_conv_bias = transfer(conv_stage1_kernels, training_set_input, training_set_ground)
 
 from train import make_env
 env = retro.make(
