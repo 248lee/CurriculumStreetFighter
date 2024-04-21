@@ -201,4 +201,4 @@ for key, value in new_params.items():
     else:
         new_params_toload['policy'][key] = value
 model2.set_parameters(new_params_toload, exact_match=False)
-model2.save('tranfered_model.zip')
+model2.save('transferred_model.zip')

@@ -29,6 +29,8 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
+STAGE=1
+
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
 
@@ -83,27 +85,29 @@ def main():
         features_extractor_kwargs=dict(features_dim=512),
     )
 
-    model = PPO(
-        "CnnPolicy", 
-        env,
-        device="cuda", 
-        verbose=1,
-        n_steps=512,
-        batch_size=512,
-        n_epochs=4,
-        gamma=0.94,
-        learning_rate=lr_schedule,
-        clip_range=clip_range_schedule,
-        tensorboard_log="logs",
-        policy_kwargs=policy_kwargs
-    )
-    # model = PPO.load('trained_models/transfered_model.zip', env=env)
-    # model.learning_rate = lr_schedule
-    # print(model.n_epochs)
-    # print(model.batch_size)
-    # print(model.gamma)
-    # print(model.n_steps)
-    # input()
+    if STAGE==1:
+        model = PPO(
+            "CnnPolicy", 
+            env,
+            device="cuda", 
+            verbose=1,
+            n_steps=512,
+            batch_size=512,
+            n_epochs=4,
+            gamma=0.94,
+            learning_rate=lr_schedule,
+            clip_range=clip_range_schedule,
+            tensorboard_log="logs",
+            policy_kwargs=policy_kwargs
+        )
+    elif STAGE==2:
+        model = PPO.load('trained_models/transferred_model.zip', env=env)
+        model.learning_rate = lr_schedule
+        print(model.n_epochs)
+        print(model.batch_size)
+        print(model.gamma)
+        print(model.n_steps)
+        input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"
     os.makedirs(save_dir, exist_ok=True)
