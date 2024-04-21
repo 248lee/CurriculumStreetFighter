@@ -3,7 +3,7 @@ Modified from https://github.com/linyiLYi/street-fighter-ai
 
 # Curriculum Street Fighter 2
 ## Introduction
-This is a project that implements the curriculum learning algorithm based on resolution increasing. The algorithm adjusts the traditional reinforcement learning process, and we wish for faster convergence speed and better resulting agent.
+This is a project that implements the curriculum learning algorithm based on resolution increasing. The algorithm adjusts the traditional reinforcement learning process, and we wish for faster convergence speed and a better resulting agent.
 
 ## Requirements
 * python 3.10.12: This project is only tested on python 3.10.12. As my previous experience of using tensorflow, any version that is newer or older than 3.10.12 may cause unexpected bugs. <font color=gray>poor python...><</font>
@@ -22,7 +22,7 @@ retro_directory = os.path.dirname(retro.__file__)
 game_dir = "data/stable/StreetFighterIISpecialChampionEdition-Genesis"
 print(os.path.join(retro_directory, game_dir))
 ```
-Note that the rom file is only used for educational purpose. Any other usages may be ILLEGAL.
+Note that the rom file provided by the above link is only used for educational purpose. Any other usages may be ILLEGAL.
 
 * ```pip install scipy```: This module is used for bilinear interpolation of the kernels when transferring the CNN.
 
