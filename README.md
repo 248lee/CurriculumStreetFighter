@@ -55,4 +55,4 @@ I changed the method of downsampling the gaming screenshow from "selecting a pix
 1. The training speed significantly slows down (from 800 iterations/secs to 400).
 
 2. The training result during stage1 slghtly improves. Shown in the following figure
-![avg_pool_result](https://imgur.com/a/yUdmH3d)
+<img src="https://i.imgur.com/qDpcx3B.png" />
