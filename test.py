@@ -29,7 +29,7 @@ MODEL_NAME = r"ppo_ryu_john_8000000_steps" # Specify the model file to load. Mod
 # ppo_ryu_3000000_steps_updated: Near the final overfitted state, almost dominate first round but barely generalizable.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
 
-RANDOM_ACTION = False
+RANDOM_ACTION = True
 NUM_EPISODES = 30 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
 MODEL_DIR = r"trained_models/"
 

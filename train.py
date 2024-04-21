@@ -65,7 +65,7 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(7e-5, 2.5e-6)
+    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -79,7 +79,7 @@ def main():
     policy_kwargs = dict(
         activation_fn=th.nn.ReLU,
         net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=Stage2CustomFeatureExtractorCNN,
+        features_extractor_class=CustomFeatureExtractorCNN,
         features_extractor_kwargs=dict(features_dim=512),
     )
 
@@ -132,7 +132,7 @@ def main():
         total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
-        tb_log_name='john_multiple_low_res',
+        tb_log_name='john_multiple_avg_pool',
     )
     env.close()
 
@@ -140,7 +140,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_low_res.zip"))
+    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_avg_pool.zip"))
 
 if __name__ == "__main__":
     main()

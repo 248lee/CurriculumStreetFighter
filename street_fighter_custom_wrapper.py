@@ -18,8 +18,6 @@ import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
-import torch as th
-
 # Custom environment wrapper
 class StreetFighterCustomWrapper(gym.Wrapper):
     def __init__(self, env, reset_round=True, rendering=False):
@@ -40,7 +38,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         self.prev_player_health = self.full_hp
         self.prev_oppont_health = self.full_hp
 
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(100, 128, 3), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(200, 256, 3), dtype=np.uint8)
         
         self.reset_round = reset_round
         self.rendering = rendering
@@ -52,7 +50,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         self.env.close()
     
     def _stack_observation(self):
-        return np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
+        result = np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
+        return result
 
     def reset(self, seed=None):
         observation, info = self.env.reset()
@@ -71,18 +70,18 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             # new_observation = pan_int_obs(observation)
             # self.frame_stack.append(new_observation)
             # self.frame_stack.append(observation)
-            self.frame_stack.append(observation[::2, ::2, :])
+            self.frame_stack.append((observation))
             
 
-        return th.from_numpy(np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)), info
+        return self._stack_observation(), info
 
     def step(self, action):
         custom_done = False
 
         obs, _reward, _done, _trunc, info = self.env.step(action)
         # obs = pan_int_obs(obs)
-        # self.frame_stack.append(obs[:, :, :])
-        self.frame_stack.append(obs[::2, ::2, :])
+        self.frame_stack.append(obs)
+        # self.frame_stack.append(obs[::2, ::2, :])# This is the old way of downsampling the image. Now we use avgpool in the neural network
 
         # Render the game if rendering flag is set to True.
         if self.rendering:
@@ -94,8 +93,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             # Keep the button pressed for (num_step_frames - 1) frames.
             obs, _reward, _done, _trunc, info = self.env.step(action)
             # obs = pan_int_obs(obs)
-            # self.frame_stack.append(obs[:, :, :])
-            self.frame_stack.append(obs[::2, ::2, :])
+            self.frame_stack.append(obs)
+            # self.frame_stack.append(obs[::2, ::2, :]) # This is the old way of downsampling the image. Now we use avgpool in the neural network
             if self.rendering:
                 self.env.render()
                 time.sleep(0.01)
@@ -132,7 +131,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             custom_done = False
                      
         # Max reward is 6 * full_hp = 1054 (damage * 3 + winning_reward * 3) norm_coefficient = 0.001
-        return th.from_numpy(self._stack_observation()), 0.001 * custom_reward, custom_done, _trunc, info # reward normalization
+        return self._stack_observation(), 0.001 * custom_reward, custom_done, _trunc, info # reward normalization
     
 class TransferStreetFighterCustomWrapper(gym.Wrapper):
     def __init__(self, env, reset_round=True, rendering=False):
