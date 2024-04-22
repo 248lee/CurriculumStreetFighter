@@ -141,7 +141,6 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
         # Use a deque to store the last 9 frames
         self.num_frames = 9
         self.frame_stack = collections.deque(maxlen=self.num_frames)
-        self.full_frame_stack = collections.deque(maxlen=self.num_frames)
 
         self.num_step_frames = 6
 
@@ -153,7 +152,7 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
         self.prev_player_health = self.full_hp
         self.prev_oppont_health = self.full_hp
 
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(100, 128, 3), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(200, 256, 3), dtype=np.uint8)
         
         self.reset_round = reset_round
         self.rendering = rendering
@@ -165,10 +164,8 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
         self.env.close()
     
     def _stack_observation(self):
-        return np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
-    
-    def _full_stack_observation(self):
-        return np.stack([self.full_frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
+        result = np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
+        return result
 
     def reset(self, seed=None, state='Champion.Level12.RyuVsBison_1.state'):
         observation, info = self.env.reset()
@@ -184,10 +181,10 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
         for _ in range(self.num_frames):
             # new_observation = pan_int_obs(observation)
             # self.frame_stack.append(new_observation)
-            self.frame_stack.append(observation[::2, ::2, :])
-            self.full_frame_stack.append(observation)
+            # self.frame_stack.append(observation)
+            self.frame_stack.append((observation))
             
-        info['original_obs'] = self._full_stack_observation()
+
         return self._stack_observation(), info
 
     def step(self, action):
@@ -195,9 +192,8 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
 
         obs, _reward, _done, _trunc, info = self.env.step(action)
         # obs = pan_int_obs(obs)
-        # self.frame_stack.append(obs[:, :, :])
-        self.frame_stack.append(obs[::2, ::2, :])
-        self.full_frame_stack.append(obs)
+        self.frame_stack.append(obs)
+        # self.frame_stack.append(obs[::2, ::2, :])# This is the old way of downsampling the image. Now we use avgpool in the neural network
 
         # Render the game if rendering flag is set to True.
         if self.rendering:
@@ -209,9 +205,8 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
             # Keep the button pressed for (num_step_frames - 1) frames.
             obs, _reward, _done, _trunc, info = self.env.step(action)
             # obs = pan_int_obs(obs)
-            # self.frame_stack.append(obs[:, :, :])
-            self.frame_stack.append(obs[::2, ::2, :])
-            self.full_frame_stack.append(obs)
+            self.frame_stack.append(obs)
+            # self.frame_stack.append(obs[::2, ::2, :]) # This is the old way of downsampling the image. Now we use avgpool in the neural network
             if self.rendering:
                 self.env.render()
                 time.sleep(0.01)
@@ -247,7 +242,6 @@ class TransferStreetFighterCustomWrapper(gym.Wrapper):
         if not self.reset_round:
             custom_done = False
                      
-        info['original_obs'] = self._full_stack_observation()
         # Max reward is 6 * full_hp = 1054 (damage * 3 + winning_reward * 3) norm_coefficient = 0.001
         return self._stack_observation(), 0.001 * custom_reward, custom_done, _trunc, info # reward normalization
     

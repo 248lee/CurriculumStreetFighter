@@ -16,21 +16,18 @@ env = retro.make(
             obs_type=retro.Observations.IMAGE    
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_sf2_ryu_final.zip', env=env)
-movie_full = []
+model = PPO.load('trained_models/ppo_ryu_john_avgpool_7000000_steps.zip', env=env)
 movie_obs = []
 for i in range(1, 33): # 32 episodes
     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
     print('BATTLE:', i)
     done = False
     obs, info = env.reset()
-    movie_full.append(info['original_obs'])
     movie_obs.append(obs)
     total_reward = 0
     while not done:
         action, _states = model.predict(obs)
         obs, reward, done, trunc, info = env.step(action)
-        movie_full.append(info['original_obs'])
         movie_obs.append(obs)
         if reward != 0:
             total_reward += reward
@@ -64,11 +61,13 @@ class TrainingSetInputGenerator(nn.Module):
 class TrainingSetGroundGenerator(nn.Module):
     def __init__(self):
         super(TrainingSetGroundGenerator, self).__init__()
+        self.avg = nn.AvgPool2d(2, stride=2)
         self.conv = nn.Conv2d(old_top_kernel.shape[1], old_top_kernel.shape[0], kernel_size=old_top_kernel.shape[2], stride=1, padding='same')
         self.relu = nn.ReLU()
         self.pool = nn.MaxPool2d(2, stride=2)
         self.flatten = nn.Flatten(start_dim=0, end_dim=-1) # garbage pytorch, if you don't specify the start_dim, it only deals with the batched input instead of pure input
     def forward(self, x):
+        x = self.avg(x)
         x = self.conv(x)
         x = self.relu(x)
         x = self.pool(x)
@@ -89,13 +88,12 @@ ts_ground_generator.load_state_dict(tmp)
 
 training_set_input = []
 training_set_ground = []
-for mf in tqdm(movie_full):
+for mf in tqdm(movie_obs):
     mf = np.transpose(mf, [2, 0, 1])
     mf = th.from_numpy(mf).cuda().to(th.float32)
     with th.no_grad():
         mf = ts_input_generator(mf)
     training_set_input.append(mf)
-del(movie_full)
 if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
     training_set_input_cpu = []
     for i in range(len(training_set_input)):
