@@ -56,3 +56,19 @@ I changed the method of downsampling the gaming screenshow from "selecting a pix
 
 2. The training result during stage1 slghtly improves. Shown in the following figure
 <img src="https://i.imgur.com/qDpcx3B.png" />
+
+## Ideas Not Implemented Yet
+I'm trying to eliminate the Kmeans process. In specific, suppose the old top-convolution-layer has ```32 8x8 kernels```. Then, after interpolation, we are going to get ```32 16x16 kernels```. After that, we cut each kernel into 4 pieces, so we get ```128 8x8 kernels``` in total. Finally, we use kmeans to select (generate) ```32 8x8 kernels``` from them.
+
+Now I'm trying to eliminate the kmeans process, and keep the ```128 8x8 kernels``` in use. Or I may even eliminate the cutting process, and directly use the ```32 16x16 kernels``` as the new layer. Below is the reason:
+
+In practice, the researchers seldom use large kernels, or a huge amount of kernels. One of the reason is that this increases the computation complexity. However, if the increasing of the computation time comes up with the increasing of accuracy, then it is a good trade-off and should be used by some researchers. However, in reality, this is not the case. I asked ChatGPT for the reason, and it replied:
+* For too many kernels: 
+> 1. **Overfitting**: With an excessive number of kernels, the model may memorize the training data instead of learning generalizable features. This can cause the model to perform poorly on unseen data.
+> 2. **Diminished Feature Reusability**: Each kernel in a convolutional layer learns to detect a specific feature or pattern in the input data. If there are too many kernels, some of them might learn redundant or highly specific features that are not useful for the overall task. This can reduce the effectiveness of feature reuse across different parts of the input data.
+
+* For too large-size kernel
+> 1. **Loss of Local Information**: Convolutional layers are designed to capture local patterns and features within the input data. When using large kernels, the receptive field becomes broader, potentially causing the model to lose fine-grained local information. This can be detrimental, especially in tasks where precise spatial relationships are crucial, such as object detection or segmentation.
+> 2. **Increased Risk of Overfitting**: Large kernels have a higher number of parameters, which can increase the risk of overfitting, especially when dealing with limited training data. The model may become too specific to the training examples and fail to generalize well to unseen data.
+
+In my opinion, curriculum learning may solve the issues listed above. This is because rather than training from-scratch, our kernels are hand-crafted, and we try our best to maintain the quality of information of the new kernels, so that overfitting, redundancy, and loss of local information will not occur. Therefore, I think we can feel easy to <u>use huge-sized or large number of kernels to observe more details without worrying to face the issues mentioned above</u>. 
