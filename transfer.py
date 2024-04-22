@@ -173,7 +173,6 @@ old_params = model.get_parameters()['policy']
 from collections import OrderedDict
 old_params_toload = OrderedDict()
 old_params_toload['policy'] = OrderedDict()
-old_params_toload['policy.optimizer'] = model.get_parameters()['policy.optimizer']
 i = 0
 for key, value in old_params.items():
     if "cnn_stage1" in key:
