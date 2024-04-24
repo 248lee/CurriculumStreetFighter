@@ -1,3 +1,4 @@
 trained_models/*
 logs/*
 __pycache__/*
+transferred_model.zip

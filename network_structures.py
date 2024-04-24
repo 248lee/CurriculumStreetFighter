@@ -4,7 +4,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import gymnasium as gym
 
 conv_stage1_kernels = 32
-conv_stage2_kernels = 32
+conv_stage2_kernels = 128
 
 class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
     """

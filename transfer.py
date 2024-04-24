@@ -18,7 +18,7 @@ env = retro.make(
 env = TransferStreetFighterCustomWrapper(env)
 model = PPO.load('trained_models/ppo_ryu_john_avgpool_7000000_steps.zip', env=env)
 movie_obs = []
-for i in range(1, 33): # 32 episodes
+for i in range(13, 33): # 32 episodes
     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
     print('BATTLE:', i)
     done = False
@@ -88,18 +88,18 @@ ts_ground_generator.load_state_dict(tmp)
 
 training_set_input = []
 training_set_ground = []
+training_set_input_cpu = []
 for mf in tqdm(movie_obs):
     mf = np.transpose(mf, [2, 0, 1])
     mf = th.from_numpy(mf).cuda().to(th.float32)
     with th.no_grad():
         mf = ts_input_generator(mf)
-    training_set_input.append(mf)
-if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
-    training_set_input_cpu = []
-    for i in range(len(training_set_input)):
-        training_set_input_cpu.append(training_set_input[i].cpu()) # copy it back to the cpu
-    del(training_set_input) # remove it from the gpu
-    training_set_input = training_set_input_cpu # rename
+    if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
+        training_set_input_cpu.append(mf.cpu())
+    else:
+        training_set_input.append(mf)
+del(training_set_input) # remove it from the gpu
+training_set_input = training_set_input_cpu # rename
 
 for mo in tqdm(movie_obs):
     mo = np.transpose(mo, [2, 0, 1])

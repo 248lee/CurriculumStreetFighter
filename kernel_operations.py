@@ -61,21 +61,25 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
   print((cut_kernels[23][0]))
   print('===============================')
   # print(z_i)
-  ls = []
+  new_bias = []
   for i in range(len(cut_kernels)):
-    ls.append(np.append(cut_kernels[i].reshape(-1), obias[i // 4])) # a original kernel is cut into 4 subkernels, so i needs to // 4
-  # print((cut_kernels[23]))
-  # print(ls[23])
-  # ls = np.array(ls)
-  # print(ls.shape)
-  kmeans = KMeans(n_clusters=new_num_of_kernels,n_init='auto',random_state=10,max_iter=1000)
-  kmeans.fit(ls)
-  result = kmeans.cluster_centers_
-  new_bias = result[:, -1]
-  result = result[:, :-1]
-  result = result.reshape((result.shape[0], cut_kernels[0].shape[0], cut_kernels[0].shape[1], cut_kernels[0].shape[2]))
-  print(result.shape)
-  return result, new_bias
+    new_bias.append(obias[i // 4])
+  return np.array(cut_kernels), np.array(new_bias)
+  # ls = []
+  # for i in range(len(cut_kernels)):
+  #   ls.append(np.append(cut_kernels[i].reshape(-1), obias[i // 4])) # a original kernel is cut into 4 subkernels, so i needs to // 4
+  # # print((cut_kernels[23]))
+  # # print(ls[23])
+  # # ls = np.array(ls)
+  # # print(ls.shape)
+  # kmeans = KMeans(n_clusters=new_num_of_kernels,n_init='auto',random_state=10,max_iter=1000)
+  # kmeans.fit(ls)
+  # result = kmeans.cluster_centers_
+  # new_bias = result[:, -1]
+  # result = result[:, :-1]
+  # result = result.reshape((result.shape[0], cut_kernels[0].shape[0], cut_kernels[0].shape[1], cut_kernels[0].shape[2]))
+  # print(result.shape)
+  # return result, new_bias
 
 class TransferModel(nn.Module):
   def __init__(self, num_of_t_input_channels, num_of_filters) -> None:
@@ -116,7 +120,7 @@ def transfer(num_of_filters, training_set_inputs, training_set_grounds):
   loss_fn = nn.MSELoss()
   trans_model = TransferModel(training_set_inputs[0].shape[0], num_of_filters)
   optimizer = th.optim.Adam(trans_model.parameters(), lr=5e-06)
-  EPOCH = 40
+  EPOCH = 11
   REPORT_DUR = 4
   training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
   training_loader = DataLoader(training_dataset, batch_size=8, shuffle=True)

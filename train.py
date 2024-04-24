@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -67,7 +67,7 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+    lr_schedule = linear_schedule(2.5e-7, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -101,7 +101,16 @@ def main():
             policy_kwargs=policy_kwargs
         )
     elif STAGE==2:
-        model = PPO.load('trained_models/transferred_model.zip', env=env)
+        custom_objects = {
+        "learning_rate": lr_schedule,
+        "clip_range": clip_range_schedule,
+        "n_steps": 512,
+        "n_epochs": 2,
+        "gamma": 0.94,
+        "batch_size": 128,
+        "tensorboard_log": "logs"
+        }
+        model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
         model.learning_rate = lr_schedule
         print(model.n_epochs)
         print(model.batch_size)
@@ -116,17 +125,12 @@ def main():
     # model_path = "trained_models/ppo_ryu_7000000_steps.zip"
     
     # Load model and modify the learning rate and entropy coefficient
-    # custom_objects = {
-    #     "learning_rate": lr_schedule,
-    #     "clip_range": clip_range_schedule,
-    #     "n_steps": 512
-    # }
-    # model = PPO.load(model_path, env=env, device="cuda", custom_objects=custom_objects)
+    
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_low_res")
+    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_avg_pool_stage2")
 
     # Writing the training logs from stdout to a file
     original_stdout = sys.stdout
@@ -136,7 +140,7 @@ def main():
         total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
-        tb_log_name='john_multiple_avg_pool',
+        tb_log_name='john_multiple_avg_s2',
     )
     env.close()
 
@@ -144,7 +148,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_avg_pool.zip"))
+    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_avg_pool_stage2.zip"))
 
 if __name__ == "__main__":
     main()
