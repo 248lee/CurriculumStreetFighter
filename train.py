@@ -67,7 +67,7 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(2.5e-7, 2.5e-10)
+    lr_schedule = linear_schedule(2.5e-5, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -104,10 +104,10 @@ def main():
         custom_objects = {
         "learning_rate": lr_schedule,
         "clip_range": clip_range_schedule,
-        "n_steps": 512,
-        "n_epochs": 2,
+        "n_steps": 256,
+        "n_epochs": 4,
         "gamma": 0.94,
-        "batch_size": 128,
+        "batch_size": 256,
         "tensorboard_log": "logs"
         }
         model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
@@ -116,6 +116,7 @@ def main():
         print(model.batch_size)
         print(model.gamma)
         print(model.n_steps)
+        print(model.policy)
         input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"

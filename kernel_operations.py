@@ -7,11 +7,6 @@ from tqdm import tqdm
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.dataloader import DataLoader
 
-conv_stage3_kernels = 64
-conv_stage2_kernels = 64
-conv_stage1_kernels = 64
-conv_kernels = 64
-
 def john_bilinear(oarr, obias, new_num_of_kernels):
   oarr = oarr.cpu().numpy()
   obias = obias.cpu().numpy()
@@ -37,34 +32,34 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
       interpolated_piece.append(z_i)
     interpolated_piece = np.array(interpolated_piece)
     interpolated_kernels.append(interpolated_piece)
-
+  return np.array(interpolated_kernels), obias
   # Start Cut the Kernels
-  cut_kernels = []
-  for ik in interpolated_kernels: # for each (4, 6, 6) kernel
-    print(ik.shape[1] / 2)
-    for x in range(0, ik.shape[1], ik.shape[1] // 2): # x will be 0 or 3
-      for y in range(0, ik.shape[2], ik.shape[2] // 2): # y will be 0 or 3
-        cut_pieces = [] # collect all channels
-        for i in range(ik.shape[0]): # iterate through channels, aka [0, 1, 2, 3]
-          cut_piece = np.zeros((ik[i].shape[0] // 2, ik[i].shape[1] // 2))
-          for j in range(0, ik[i].shape[0] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
-            for k in range(0, ik[i].shape[1] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
-              cut_piece[j][k] = ik[i][j + x][k + y] # fill the piece. Remember to add the offset x and y
-          cut_pieces.append(cut_piece)
-        cut_pieces = np.array(cut_pieces) # one kernel has finished cutting! Ready to push? GO!!!
-        cut_kernels.append(cut_pieces)
-  print((interpolated_kernels[5][0]))
-  print('==================================')
-  print((cut_kernels[20][0]))
-  print((cut_kernels[21][0]))
-  print((cut_kernels[22][0]))
-  print((cut_kernels[23][0]))
-  print('===============================')
+  # cut_kernels = []
+  # for ik in interpolated_kernels: # for each (4, 6, 6) kernel
+  #   print(ik.shape[1] / 2)
+  #   for x in range(0, ik.shape[1], ik.shape[1] // 2): # x will be 0 or 3
+  #     for y in range(0, ik.shape[2], ik.shape[2] // 2): # y will be 0 or 3
+  #       cut_pieces = [] # collect all channels
+  #       for i in range(ik.shape[0]): # iterate through channels, aka [0, 1, 2, 3]
+  #         cut_piece = np.zeros((ik[i].shape[0] // 2, ik[i].shape[1] // 2))
+  #         for j in range(0, ik[i].shape[0] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
+  #           for k in range(0, ik[i].shape[1] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
+  #             cut_piece[j][k] = ik[i][j + x][k + y] # fill the piece. Remember to add the offset x and y
+  #         cut_pieces.append(cut_piece)
+  #       cut_pieces = np.array(cut_pieces) # one kernel has finished cutting! Ready to push? GO!!!
+  #       cut_kernels.append(cut_pieces)
+  # print((interpolated_kernels[5][0]))
+  # print('==================================')
+  # print((cut_kernels[20][0]))
+  # print((cut_kernels[21][0]))
+  # print((cut_kernels[22][0]))
+  # print((cut_kernels[23][0]))
+  # print('===============================')
   # print(z_i)
-  new_bias = []
+  '''new_bias = []
   for i in range(len(cut_kernels)):
     new_bias.append(obias[i // 4])
-  return np.array(cut_kernels), np.array(new_bias)
+  return np.array(cut_kernels), np.array(new_bias)'''
   # ls = []
   # for i in range(len(cut_kernels)):
   #   ls.append(np.append(cut_kernels[i].reshape(-1), obias[i // 4])) # a original kernel is cut into 4 subkernels, so i needs to // 4
