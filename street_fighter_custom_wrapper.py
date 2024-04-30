@@ -69,8 +69,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         for _ in range(self.num_frames):
             # new_observation = pan_int_obs(observation)
             # self.frame_stack.append(new_observation)
-            # self.frame_stack.append(observation)
-            self.frame_stack.append((observation))
+            self.frame_stack.append(observation)
+            # self.frame_stack.append((observation[::2, ::2, :]))
             
 
         return self._stack_observation(), info

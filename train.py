@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=2
+STAGE=1
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -67,7 +67,7 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(2.5e-5, 2.5e-10)
+    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -81,7 +81,7 @@ def main():
     policy_kwargs = dict(
         activation_fn=th.nn.ReLU,
         net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=CustomFeatureExtractorCNN,
+        features_extractor_class=Stage2CustomFeatureExtractorCNN,
         features_extractor_kwargs=dict(features_dim=512),
     )
 
@@ -131,7 +131,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_avg_pool_stage2")
+    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_stage2_ctl")
 
     # Writing the training logs from stdout to a file
     original_stdout = sys.stdout
@@ -141,7 +141,7 @@ def main():
         total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
-        tb_log_name='john_multiple_avg_s2',
+        tb_log_name='john_multiple_stage2_ctl',
     )
     env.close()
 
@@ -149,7 +149,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_avg_pool_stage2.zip"))
+    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_stage2_ctl.zip"))
 
 if __name__ == "__main__":
     main()
