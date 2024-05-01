@@ -26,12 +26,31 @@ old_top_bias = next(itr)[1] # This gets the second item of the dict, which is th
 interpolated_kernel, k_bias = john_bilinear(old_top_kernel, old_top_bias, conv_stage2_kernels)
 picked_interpolated_kernel = []
 for i in range(len(interpolated_kernel)):
-    picked_interpolated_kernel.append(interpolated_kernel[i, 3, :, :, :]) # pick the left-bottom kernel piece
+    picked_interpolated_kernel.append(interpolated_kernel[i, 3, :, :, :]) # pick the right-bottom kernel piece
 picked_interpolated_kernel = np.array(picked_interpolated_kernel)
 s = picked_interpolated_kernel.shape
+print("before reshape", s)
 picked_interpolated_kernel = picked_interpolated_kernel.reshape((s[0] * s[1], 1, s[2], s[3]))
-print("picked shape:", picked_interpolated_kernel.shape)
-input()
+print("picked shape:", picked_interpolated_kernel.shape) # (96, 1, 8, 8)
+
+import matplotlib.pyplot as plt
+target = 2
+fig, axes = plt.subplots(nrows=1, ncols=2)
+c = 2
+tmin = np.min(old_top_kernel[target][c].cpu().numpy())
+tmax = np.max(old_top_kernel[target][c].cpu().numpy())
+axes[0].imshow(old_top_kernel[target][c].cpu().numpy(), vmin=tmin, vmax=tmax)
+axes[1].imshow(picked_interpolated_kernel[target * 3 + c][0], vmin=tmin, vmax=tmax)
+
+fig, axes = plt.subplots(nrows=2, ncols=2)
+four_min = np.min([np.min(interpolated_kernel[target][i][c]) for i in range(4)])
+four_max = np.max([np.max(interpolated_kernel[target][i][c]) for i in range(4)])
+axes[0][0].imshow(interpolated_kernel[target][0][c], vmin=tmin, vmax=tmax)
+axes[0][1].imshow(interpolated_kernel[target][1][c], vmin=tmin, vmax=tmax)
+axes[1][0].imshow(interpolated_kernel[target][2][c], vmin=tmin, vmax=tmax)
+axes[1][1].imshow(interpolated_kernel[target][3][c], vmin=tmin, vmax=tmax)
+plt.show()
+
 # for i in range(13, 33): # 32 episodes
 #     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
 #     print('BATTLE:', i)

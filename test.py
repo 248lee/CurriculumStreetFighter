@@ -19,11 +19,12 @@ import matplotlib.pyplot as plt
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 import torch as th
 import torch.nn as nn
+import numpy as np
 
 RESET_ROUND = False  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"transferred_model" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"transferred_model_correct" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -60,7 +61,7 @@ if not RANDOM_ACTION:
     top_kernels = model.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight']
     print(top_kernels[0].shape) # (3, 8, 8)
     m = nn.Conv2d(3, 1, 8, padding='same', bias=False)
-    target = 21
+    target = 18
     m.load_state_dict({'weight': top_kernels[target].unsqueeze(0)}) # 4: shadow, 15: jumping enemy, 21: feat, 25: shadow
     avg_pool = nn.AvgPool2d(kernel_size=(2, 2), stride=(2, 2))
 
@@ -68,6 +69,18 @@ if not RANDOM_ACTION:
     M = nn.Conv2d(3, 3, 8, groups=3, padding='same', bias=False)
     print("conv2 one kernel shape", M.state_dict()['weight'].shape) # [3, 1, 8, 8]
     M.load_state_dict({'weight': new_kernels[target * 3 : target * 3 + 3, :, :, :]})
+
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    c = 0
+    print("m shape", m.state_dict()['weight'].shape)
+    print('M shape', M.state_dict()['weight'].shape)
+    _m = m.state_dict()['weight'][0][c].cpu().numpy()
+    _M = M.state_dict()['weight'][c][0].cpu().numpy()
+    vmin = np.min(_m)
+    vmax = np.max(_M)
+    axes[0].imshow(_m, vmin=vmin, vmax=vmax)
+    axes[1].imshow(_M, vmin=vmin, vmax=vmax)
+    plt.show()
 
 
 obs, _info = env.reset()
@@ -101,17 +114,17 @@ for _ in range(num_episodes):
                 draw_obs_s1 = avg_pool(draw_obs)
             print(draw_obs_s1.shape)
             # Create a figure and axis objects
-            fig, axes = plt.subplots(nrows=1, ncols=3)
+            fig, axes = plt.subplots(nrows=2, ncols=2)
 
             # Display the first image on the left
-            axes[0].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
-            axes[0].set_title('Before Conv')
+            axes[0][0].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
+            axes[0][0].set_title('Before Conv')
             with th.no_grad():
                 draw_obs_s1 = m(draw_obs_s1)
                 draw_obs_s1 = relu(draw_obs_s1)
             # Display the second image on the right
-            pic = axes[1].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
-            axes[1].set_title('After Conv')
+            pic = axes[0][1].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
+            axes[0][1].set_title('After stage1 Conv')
 
             with th.no_grad():
                 draw_obs_s2 = M(draw_obs)
@@ -119,9 +132,9 @@ for _ in range(num_episodes):
                 draw_obs_s2 = maxpool(draw_obs_s2)
                 draw_obs_s2 = m(draw_obs_s2)
                 draw_obs_s2 = relu(draw_obs_s2)
-            pic = axes[2].imshow(th.Tensor.numpy(draw_obs_s2).transpose(1, 2, 0) / 255)
-            fig.colorbar(pic, ax=axes[2])
-            axes[2].set_title('After 2 Convs')
+            pic = axes[1][1].imshow(th.Tensor.numpy(draw_obs_s2).transpose(1, 2, 0) / 255)
+            fig.colorbar(pic, ax=axes[1][0])
+            axes[1][1].set_title('After stage2 Convs')
             plt.show()
         # for i in range(3):
         #     plt.imshow(obs[:, :, i], cmap='gray')

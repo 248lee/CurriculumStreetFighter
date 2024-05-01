@@ -6,6 +6,7 @@ import torch as th
 from tqdm import tqdm
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.dataloader import DataLoader
+import cv2
 
 def john_bilinear(oarr, obias, new_num_of_kernels):
   oarr = oarr.cpu().numpy()
@@ -25,21 +26,23 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
     for j in range(num_of_channels):
       old_kernel = oarr[i][j]
       # print(old_kernel)
-      x = np.linspace(0, 1, old_kernel.shape[0])
-      y = np.linspace(0, 1, old_kernel.shape[1])
+      # x = np.linspace(0, 1, old_kernel.shape[0])
+      # y = np.linspace(0, 1, old_kernel.shape[1])
 
-      interp = RegularGridInterpolator((x, y), old_kernel)
+      # interp = RegularGridInterpolator((x, y), old_kernel)
 
-      x_i = np.linspace(0, 1, old_kernel.shape[0] * 2) # therefore, the shape of the interpolated kernel must be even, because of * 2
-      y_i = np.linspace(0, 1, old_kernel.shape[1] * 2)
-      x_i, y_i = np.meshgrid(x_i, y_i)
-      points = np.vstack([x_i.ravel(), y_i.ravel()]).T
-      z_i = interp(points)
-      z_i = z_i.reshape(x_i.shape)
+      # x_i = np.linspace(0, 1, old_kernel.shape[0] * 2) # therefore, the shape of the interpolated kernel must be even, because of * 2
+      # y_i = np.linspace(0, 1, old_kernel.shape[1] * 2)
+      # x_i, y_i = np.meshgrid(x_i, y_i)
+      # points = np.vstack([x_i.ravel(), y_i.ravel()]).T
+      # z_i = interp(points)
+      # z_i = z_i.reshape(x_i.shape)
+      z_i = cv2.resize(old_kernel, (old_kernel.shape[0] * 2, old_kernel.shape[1] * 2), interpolation=cv2.INTER_LINEAR)
       interpolated_piece.append(z_i)
     interpolated_piece = np.array(interpolated_piece)
     interpolated_kernels.append(interpolated_piece)
   '''return np.array(interpolated_kernels), obias'''
+
   # Start Cut the Kernels
   cut_features = []
   for ik in interpolated_kernels: # for each (4, 6, 6) kernel
@@ -66,11 +69,29 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
   # print('===============================')
   # input()
   # print(z_i)
+
+  # import matplotlib.pyplot as plt
+  # target = 27
+  # fig, axes = plt.subplots(nrows=1, ncols=2)
+  # axes[0].imshow(oarr[target][0])
+  # axes[1].imshow(interpolated_kernels[target][0])
+  # plt.show()
+  # import matplotlib.pyplot as plt
+  # fig, axes = plt.subplots(nrows=2, ncols=2)
+  # four_min = np.min([np.min(cut_features[target][i][0]) for i in range(4)])
+  # four_max = np.max([np.max(cut_features[target][i][0]) for i in range(4)])
+  # axes[0][0].imshow(cut_features[target][0][0], vmin=four_min, vmax=four_max)
+  # axes[0][1].imshow(cut_features[target][1][0], vmin=four_min, vmax=four_max)
+  # axes[1][0].imshow(cut_features[target][2][0], vmin=four_min, vmax=four_max)
+  # axes[1][1].imshow(cut_features[target][3][0], vmin=four_min, vmax=four_max)
+  # plt.show()
+  
   new_bias = []
   for i in range(len(cut_features)):
     new_bias.append(obias[i // 4])
   print("features shape:", np.array(cut_features).shape) # (32, 4, 3, 8, 8)
   # input()
+  
   return np.array(cut_features), np.array(new_bias)
   # ls = []
   # for i in range(len(cut_kernels)):
