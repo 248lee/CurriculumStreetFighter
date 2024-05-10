@@ -24,7 +24,7 @@ import numpy as np
 RESET_ROUND = False  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"transferred_model_correct" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"transferred_model" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -70,17 +70,17 @@ if not RANDOM_ACTION:
     print("conv2 one kernel shape", M.state_dict()['weight'].shape) # [3, 1, 8, 8]
     M.load_state_dict({'weight': new_kernels[target * 3 : target * 3 + 3, :, :, :]})
 
-    fig, axes = plt.subplots(nrows=1, ncols=2)
-    c = 0
-    print("m shape", m.state_dict()['weight'].shape)
-    print('M shape', M.state_dict()['weight'].shape)
-    _m = m.state_dict()['weight'][0][c].cpu().numpy()
-    _M = M.state_dict()['weight'][c][0].cpu().numpy()
-    vmin = np.min(_m)
-    vmax = np.max(_M)
-    axes[0].imshow(_m, vmin=vmin, vmax=vmax)
-    axes[1].imshow(_M, vmin=vmin, vmax=vmax)
-    plt.show()
+    fig, axes = plt.subplots(nrows=3, ncols=2)
+    for c in range(0, 3):
+        print("m shape", m.state_dict()['weight'].shape)
+        print('M shape', M.state_dict()['weight'].shape)
+        _m = m.state_dict()['weight'][0][c].cpu().numpy()
+        _M = M.state_dict()['weight'][c][0].cpu().numpy()
+        vmin = np.min(_m)
+        vmax = np.max(_M)
+        axes[c][0].imshow(_m, vmin=vmin, vmax=vmax)
+        axes[c][1].imshow(_M, vmin=vmin, vmax=vmax)
+    plt.savefig("kernels.png")
 
 
 obs, _info = env.reset()

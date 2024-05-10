@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -67,7 +67,7 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+    lr_schedule = linear_schedule(2.5e-6, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
