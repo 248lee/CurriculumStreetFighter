@@ -6,6 +6,12 @@ import torch as th
 from tqdm import tqdm
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.dataloader import DataLoader
+import cv2
+
+conv_stage3_kernels = 64
+conv_stage2_kernels = 64
+conv_stage1_kernels = 64
+conv_kernels = 64
 
 def john_bilinear(oarr, obias, new_num_of_kernels):
   oarr = oarr.cpu().numpy()
@@ -18,73 +24,72 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
     for j in range(num_of_channels):
       old_kernel = oarr[i][j]
       # print(old_kernel)
-      x = np.linspace(0, 1, old_kernel.shape[0])
-      y = np.linspace(0, 1, old_kernel.shape[1])
+      # print(old_kernel)
+      # x = np.linspace(0, 1, old_kernel.shape[0])
+      # y = np.linspace(0, 1, old_kernel.shape[1])
 
-      interp = RegularGridInterpolator((x, y), old_kernel)
+      # interp = RegularGridInterpolator((x, y), old_kernel)
 
-      x_i = np.linspace(0, 1, old_kernel.shape[0] * 2) # therefore, the shape of the interpolated kernel must be even, because of * 2
-      y_i = np.linspace(0, 1, old_kernel.shape[1] * 2)
-      x_i, y_i = np.meshgrid(x_i, y_i)
-      points = np.vstack([x_i.ravel(), y_i.ravel()]).T
-      z_i = interp(points)
-      z_i = z_i.reshape(x_i.shape)
+      # x_i = np.linspace(0, 1, old_kernel.shape[0] * 2) # therefore, the shape of the interpolated kernel must be even, because of * 2
+      # y_i = np.linspace(0, 1, old_kernel.shape[1] * 2)
+      # x_i, y_i = np.meshgrid(x_i, y_i)
+      # points = np.vstack([x_i.ravel(), y_i.ravel()]).T
+      # z_i = interp(points)
+      # z_i = z_i.reshape(x_i.shape)
+      z_i = cv2.resize(old_kernel, (old_kernel.shape[0] * 2, old_kernel.shape[1] * 2), interpolation=cv2.INTER_LINEAR)
       interpolated_piece.append(z_i)
     interpolated_piece = np.array(interpolated_piece)
     interpolated_kernels.append(interpolated_piece)
-  return np.array(interpolated_kernels), obias
+
   # Start Cut the Kernels
-  # cut_kernels = []
-  # for ik in interpolated_kernels: # for each (4, 6, 6) kernel
-  #   print(ik.shape[1] / 2)
-  #   for x in range(0, ik.shape[1], ik.shape[1] // 2): # x will be 0 or 3
-  #     for y in range(0, ik.shape[2], ik.shape[2] // 2): # y will be 0 or 3
-  #       cut_pieces = [] # collect all channels
-  #       for i in range(ik.shape[0]): # iterate through channels, aka [0, 1, 2, 3]
-  #         cut_piece = np.zeros((ik[i].shape[0] // 2, ik[i].shape[1] // 2))
-  #         for j in range(0, ik[i].shape[0] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
-  #           for k in range(0, ik[i].shape[1] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
-  #             cut_piece[j][k] = ik[i][j + x][k + y] # fill the piece. Remember to add the offset x and y
-  #         cut_pieces.append(cut_piece)
-  #       cut_pieces = np.array(cut_pieces) # one kernel has finished cutting! Ready to push? GO!!!
-  #       cut_kernels.append(cut_pieces)
-  # print((interpolated_kernels[5][0]))
-  # print('==================================')
-  # print((cut_kernels[20][0]))
-  # print((cut_kernels[21][0]))
-  # print((cut_kernels[22][0]))
-  # print((cut_kernels[23][0]))
-  # print('===============================')
+  cut_kernels = []
+  for ik in interpolated_kernels: # for each (4, 6, 6) kernel
+    print(ik.shape[1] / 2)
+    for x in range(0, ik.shape[1], ik.shape[1] // 2): # x will be 0 or 3
+      for y in range(0, ik.shape[2], ik.shape[2] // 2): # y will be 0 or 3
+        cut_pieces = [] # collect all channels
+        for i in range(ik.shape[0]): # iterate through channels, aka [0, 1, 2, 3]
+          cut_piece = np.zeros((ik[i].shape[0] // 2, ik[i].shape[1] // 2))
+          for j in range(0, ik[i].shape[0] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
+            for k in range(0, ik[i].shape[1] // 2): # iterate through the side of the kernel, aka [0, 1, 2]
+              cut_piece[j][k] = ik[i][j + x][k + y] # fill the piece. Remember to add the offset x and y
+          cut_pieces.append(cut_piece)
+        cut_pieces = np.array(cut_pieces) # one kernel has finished cutting! Ready to push? GO!!!
+        cut_kernels.append(cut_pieces)
+  print((interpolated_kernels[5][0]))
+  print('==================================')
+  print((cut_kernels[20][0]))
+  print((cut_kernels[21][0]))
+  print((cut_kernels[22][0]))
+  print((cut_kernels[23][0]))
+  print('===============================')
   # print(z_i)
-  '''new_bias = []
+  ls = []
   for i in range(len(cut_kernels)):
-    new_bias.append(obias[i // 4])
-  return np.array(cut_kernels), np.array(new_bias)'''
-  # ls = []
-  # for i in range(len(cut_kernels)):
-  #   ls.append(np.append(cut_kernels[i].reshape(-1), obias[i // 4])) # a original kernel is cut into 4 subkernels, so i needs to // 4
-  # # print((cut_kernels[23]))
-  # # print(ls[23])
-  # # ls = np.array(ls)
-  # # print(ls.shape)
-  # kmeans = KMeans(n_clusters=new_num_of_kernels,n_init='auto',random_state=10,max_iter=1000)
-  # kmeans.fit(ls)
-  # result = kmeans.cluster_centers_
-  # new_bias = result[:, -1]
-  # result = result[:, :-1]
-  # result = result.reshape((result.shape[0], cut_kernels[0].shape[0], cut_kernels[0].shape[1], cut_kernels[0].shape[2]))
-  # print(result.shape)
-  # return result, new_bias
+    ls.append(cut_kernels[i].reshape(-1))
+  # print((cut_kernels[23]))
+  # print(ls[23])
+  # ls = np.array(ls)
+  # print(ls.shape)
+  kmeans = KMeans(n_clusters=new_num_of_kernels,n_init='auto',random_state=10,max_iter=1000)
+  kmeans.fit(ls)
+  result = kmeans.cluster_centers_
+  result = result.reshape((result.shape[0], cut_kernels[0].shape[0], cut_kernels[0].shape[1], cut_kernels[0].shape[2]))
+  print(result.shape)
+  return result
 
 class TransferModel(nn.Module):
-  def __init__(self, num_of_t_input_channels, num_of_filters) -> None:
+  def __init__(self, input_shape, num_of_filters) -> None:
     super(TransferModel, self).__init__()
+    num_of_t_input_channels = input_shape[0]
+    self.bn = nn.BatchNorm2d(num_of_t_input_channels, affine=False)
     self.conv = nn.Conv2d(num_of_t_input_channels, num_of_filters, kernel_size=8, stride=1, padding='same')
     self.relu = nn.ReLU()
     self.pool = nn.MaxPool2d(2, stride=2)
     self.flatten = nn.Flatten()
 
   def forward(self, x):
+    x = self.bn(x)
     x = self.conv(x)
     x = self.relu(x)
     x = self.pool(x)
@@ -113,9 +118,9 @@ class TransferDataset(Dataset):
 
 def transfer(num_of_filters, training_set_inputs, training_set_grounds):
   loss_fn = nn.MSELoss()
-  trans_model = TransferModel(training_set_inputs[0].shape[0], num_of_filters)
+  trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
   optimizer = th.optim.Adam(trans_model.parameters(), lr=5e-06)
-  EPOCH = 11
+  EPOCH = 40
   REPORT_DUR = 4
   training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
   training_loader = DataLoader(training_dataset, batch_size=8, shuffle=True)
@@ -148,4 +153,4 @@ def transfer(num_of_filters, training_set_inputs, training_set_grounds):
     # pbar.clear()
     # print('EPOCH {}: Loss {}'.format(e, last_loss))
   
-  return trans_model.state_dict()['conv.weight'], trans_model.state_dict()['conv.bias']
+  return trans_model.state_dict()['conv.weight'], trans_model.state_dict()['conv.bias'], trans_model.bn.state_dict()
