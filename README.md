@@ -57,7 +57,7 @@ I changed the method of downsampling the gaming screenshow from "selecting a pix
 2. The training result during stage1 slghtly improves. Shown in the following figure
 <img src="https://i.imgur.com/qDpcx3B.png" />
 
-## Ideas Not Implemented Yet
+## Ideas Not Implemented Yet (FAILED...)
 I'm trying to eliminate the Kmeans process. In specific, suppose the old top-convolution-layer has ```32 8x8 kernels```. Then, after interpolation, we are going to get ```32 16x16 kernels```. After that, we cut each kernel into 4 pieces, so we get ```128 8x8 kernels``` in total. Finally, we use kmeans to select (generate) ```32 8x8 kernels``` from them.
 
 Now I'm trying to eliminate the kmeans process, and keep the ```128 8x8 kernels``` in use. Or I may even eliminate the cutting process, and directly use the ```32 16x16 kernels``` as the new layer. Below is the reason:
