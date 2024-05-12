@@ -128,7 +128,7 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
 
   # Freeze the layers except cnn_stage1
   for name, param in trans_model.named_parameters():
-    if not ("cnn_stage1" in name):
+    if not (("cnn_stage1" in name) or ("bn" in name)):
       param.requires_grad = False
 
   for e in range(EPOCH):
@@ -165,4 +165,4 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
     # pbar.clear()
     # print('EPOCH {}: Loss {}'.format(e, last_loss))
   
-  return trans_model.state_dict()['conv.weight'], trans_model.state_dict()['conv.bias'], trans_model.bn.state_dict()
+  return trans_model

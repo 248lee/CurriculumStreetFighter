@@ -24,7 +24,7 @@ movie_label = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for i in range(1, 33): # 32 episodes
+for i in range(32, 33): # 32 episodes
     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
     print('BATTLE:', i)
     done = False
@@ -34,7 +34,11 @@ for i in range(1, 33): # 32 episodes
         action, _states = model.predict(obs)
         obs_tensor, _ = policy.obs_to_tensor(obs)
         with th.no_grad():
-            movie_label.append(policy.get_distribution(obs_tensor).distribution.probs)
+            label = policy.get_distribution(obs_tensor).distribution.probs
+            label = th.squeeze(label, 0)
+            movie_label.append(label)
+        # print(movie_label[-1].shape)
+        # input("hello there")
         obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
         movie_obs.append(obs_tensor)
         movie_action.append(action)
@@ -209,8 +213,18 @@ for key, value in new_params.items():
         new_params_toload['policy'][key] = value
 model2.set_parameters(new_params_toload, exact_match=False)
 
+obs, info = env.reset()
+obs_tensor, _ = model2.policy.obs_to_tensor(obs)
+# print(policy.get_distribution(obs_tensor).distribution.probs.shape)
+# input("hello here")
+
+print(model2.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight'][0][0])
 from kernel_operations import transfer
-trained_conv_weight, trained_conv_bias, bn_dict = transfer(model2.policy, movie_obs, movie_label)
+transferred_policy = transfer(model2.policy, movie_obs, movie_label)
+
+model2.policy = transferred_policy
+print("=======")
+print(model2.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight'][0][0])
 
 model2.save('transferred_model.zip')
 # printing the norm of the weightings
