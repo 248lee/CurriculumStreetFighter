@@ -8,27 +8,38 @@ import torch as th
 import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
+from stable_baselines3.common.preprocessing import preprocess_obs
 
 env = retro.make(
             game="StreetFighterIISpecialChampionEdition-Genesis", 
             state="Champion.Level12.RyuVsBison", 
             use_restricted_actions=retro.Actions.FILTERED, 
-            obs_type=retro.Observations.IMAGE    
+            render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
 model = PPO.load('trained_models/ppo_ryu_john_avgpool_7000000_steps.zip', env=env)
+policy = model.policy
 movie_obs = []
+movie_label = []
+movie_action = []
+from stable_baselines3.common.policies import ActorCriticCnnPolicy
+from stable_baselines3.common.distributions import BernoulliDistribution
 for i in range(1, 33): # 32 episodes
     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
     print('BATTLE:', i)
     done = False
     obs, info = env.reset()
-    movie_obs.append(obs)
     total_reward = 0
     while not done:
         action, _states = model.predict(obs)
+        obs_tensor, _ = policy.obs_to_tensor(obs)
+        with th.no_grad():
+            movie_label.append(policy.get_distribution(obs_tensor).distribution.probs)
+        obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
+        movie_obs.append(obs_tensor)
+        movie_action.append(action)
+
         obs, reward, done, trunc, info = env.step(action)
-        movie_obs.append(obs)
         if reward != 0:
             total_reward += reward
             print("Reward: {:.3f}, playerHP: {}, enemyHP:{}".format(reward, info['agent_hp'], info['enemy_hp']))
@@ -41,86 +52,83 @@ for i in range(1, 33): # 32 episodes
         print('Lose...')
     print("Total reward: {}\n".format(total_reward))
 env.close()
-
 ordered_dict_of_params = model.get_parameters()['policy']
 itr = iter(ordered_dict_of_params.items())
 old_top_kernel = next(itr)[1] # This gets the top item of the dict, which is the top kernel
 old_top_bias = next(itr)[1] # This gets the second item of the dict, which is the top bias
 interpolated_kernel = john_bilinear(old_top_kernel, old_top_bias, conv_stage2_kernels)
-class TrainingSetInputGenerator(nn.Module):
-    def __init__(self):
-        super(TrainingSetInputGenerator, self).__init__()
-        self.conv = nn.Conv2d(interpolated_kernel.shape[1], interpolated_kernel.shape[0], kernel_size=interpolated_kernel.shape[2], stride=1, padding='same', bias=False)
-        self.relu = nn.ReLU()
-        self.pool = nn.MaxPool2d(2, stride=2)
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.relu(x)
-        x = self.pool(x)
-        return x
-class TrainingSetGroundGenerator(nn.Module):
-    def __init__(self):
-        super(TrainingSetGroundGenerator, self).__init__()
-        self.avg = nn.AvgPool2d(2, stride=2)
-        self.conv = nn.Conv2d(old_top_kernel.shape[1], old_top_kernel.shape[0], kernel_size=old_top_kernel.shape[2], stride=1, padding='same')
-        self.relu = nn.ReLU()
-        self.pool = nn.MaxPool2d(2, stride=2)
-        self.flatten = nn.Flatten(start_dim=0, end_dim=-1) # garbage pytorch, if you don't specify the start_dim, it only deals with the batched input instead of pure input
-    def forward(self, x):
-        x = self.avg(x)
-        x = self.conv(x)
-        x = self.relu(x)
-        x = self.pool(x)
-        x = self.flatten(x)
-        return x
+# class TrainingSetInputGenerator(nn.Module):
+#     def __init__(self):
+#         super(TrainingSetInputGenerator, self).__init__()
+#         self.conv = nn.Conv2d(interpolated_kernel.shape[1], interpolated_kernel.shape[0], kernel_size=interpolated_kernel.shape[2], stride=1, padding='same', bias=False)
+#         self.relu = nn.ReLU()
+#         self.pool = nn.MaxPool2d(2, stride=2)
+#     def forward(self, x):
+#         x = self.conv(x)
+#         x = self.relu(x)
+#         x = self.pool(x)
+#         return x
+# class TrainingSetGroundGenerator(nn.Module):
+#     def __init__(self):
+#         super(TrainingSetGroundGenerator, self).__init__()
+#         self.avg = nn.AvgPool2d(2, stride=2)
+#         self.conv = nn.Conv2d(old_top_kernel.shape[1], old_top_kernel.shape[0], kernel_size=old_top_kernel.shape[2], stride=1, padding='same')
+#         self.relu = nn.ReLU()
+#         self.pool = nn.MaxPool2d(2, stride=2)
+#         self.flatten = nn.Flatten(start_dim=0, end_dim=-1) # garbage pytorch, if you don't specify the start_dim, it only deals with the batched input instead of pure input
+#     def forward(self, x):
+#         x = self.avg(x)
+#         x = self.conv(x)
+#         x = self.relu(x)
+#         x = self.pool(x)
+#         x = self.flatten(x)
+#         return x
 
-ts_input_generator = TrainingSetInputGenerator().cuda()
-tmp = ts_input_generator.state_dict()
-tmp['conv.weight'] = th.from_numpy(interpolated_kernel)
-ts_input_generator.load_state_dict(tmp)
+# ts_input_generator = TrainingSetInputGenerator().cuda()
+# tmp = ts_input_generator.state_dict()
+# tmp['conv.weight'] = th.from_numpy(interpolated_kernel)
+# ts_input_generator.load_state_dict(tmp)
 
-ts_ground_generator = TrainingSetGroundGenerator().cuda()
-tmp = ts_ground_generator.state_dict()
-tmp['conv.weight'] = (old_top_kernel)
-tmp['conv.bias'] = (old_top_bias)
-ts_ground_generator.load_state_dict(tmp)
+# ts_ground_generator = TrainingSetGroundGenerator().cuda()
+# tmp = ts_ground_generator.state_dict()
+# tmp['conv.weight'] = (old_top_kernel)
+# tmp['conv.bias'] = (old_top_bias)
+# ts_ground_generator.load_state_dict(tmp)
 
-training_set_input = []
-training_set_ground = []
-for mf in tqdm(movie_obs):
-    mf = np.transpose(mf, [2, 0, 1])
-    mf = th.from_numpy(mf).cuda().to(th.float32)
-    mf = mf / 255
-    with th.no_grad():
-        mf = ts_input_generator(mf)
-    training_set_input.append(mf)
-if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
-    training_set_input_cpu = []
-    for i in range(len(training_set_input)):
-        training_set_input_cpu.append(training_set_input[i].cpu()) # copy it back to the cpu
-    del(training_set_input) # remove it from the gpu
-    training_set_input = training_set_input_cpu # rename
+# training_set_input = []
+# training_set_ground = []
+# for mf in tqdm(movie_obs):
+#     # mf = np.transpose(mf, [2, 0, 1])
+#     # mf = th.from_numpy(mf).cuda().to(th.float32)
+#     mf = preprocess_obs(mf, env.observation_space, normalize_images=True)
+#     with th.no_grad():
+#         mf = ts_input_generator(mf)
+#     training_set_input.append(mf)
+# if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
+#     training_set_input_cpu = []
+#     for i in range(len(training_set_input)):
+#         training_set_input_cpu.append(training_set_input[i].cpu()) # copy it back to the cpu
+#     del(training_set_input) # remove it from the gpu
+#     training_set_input = training_set_input_cpu # rename
 
-for mo in tqdm(movie_obs):
-    mo = np.transpose(mo, [2, 0, 1])
-    mo = th.from_numpy(mo).cuda().to(th.float32)
-    mo = mo / 255
-    with th.no_grad():
-        mo = ts_ground_generator(mo)
-    training_set_ground.append(mo)
-del(movie_obs)
-if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
-    training_set_ground_cpu = []
-    for i in range(len(training_set_ground)):
-        training_set_ground_cpu.append(training_set_ground[i].cpu()) # copy it back to the cpu
-    del(training_set_ground) # remove it from the gpu
-    training_set_ground = training_set_ground_cpu
+# for mo in tqdm(movie_obs):
+#     mo = np.transpose(mo, [2, 0, 1])
+#     mo = th.from_numpy(mo).cuda().to(th.float32)
+#     mo = mo / 255
+#     with th.no_grad():
+#         mo = ts_ground_generator(mo)
+#     training_set_ground.append(mo)
+# del(movie_obs)
+# if th.cuda.get_device_name(None) == 'NVIDIA GeForce GTX 1080 Ti': # 1080 Ti is too weak to operate this. CPU is needed
+#     training_set_ground_cpu = []
+#     for i in range(len(training_set_ground)):
+#         training_set_ground_cpu.append(training_set_ground[i].cpu()) # copy it back to the cpu
+#     del(training_set_ground) # remove it from the gpu
+#     training_set_ground = training_set_ground_cpu
 
-print('input shape', training_set_input[0].shape)
-print('ground shape', training_set_ground[0].shape)
+# print('input shape', training_set_input[0].shape)
+# print('ground shape', training_set_ground[0].shape)
 
-from kernel_operations import transfer
-trained_conv_weight, trained_conv_bias, bn_dict = transfer(conv_stage1_kernels, training_set_input, training_set_ground)
 from train import make_env
 env = retro.make(
             game="StreetFighterIISpecialChampionEdition-Genesis", 
@@ -169,6 +177,7 @@ model2 = PPO(
     policy_kwargs=policy_kwargs
 )
 print(model2.policy)
+
 old_params = model.get_parameters()['policy']
 from collections import OrderedDict
 old_params_toload = OrderedDict()
@@ -189,16 +198,20 @@ new_params_toload['policy'] = OrderedDict()
 for key, value in new_params.items():
     if "cnn_stage2.0.weight" in key:
         new_params_toload['policy'][key] = th.from_numpy(interpolated_kernel)
-    elif "bn" in key:
-        if key.rsplit('.', 1)[-1] in bn_dict:
-            new_params_toload['policy'][key] = bn_dict[key.rsplit('.', 1)[-1]] # get each parameters of bn
-    elif "cnn_stage1.0.weight" in key:
-        new_params_toload['policy'][key] = trained_conv_weight
-    elif "cnn_stage1.0.bias" in key:
-        new_params_toload['policy'][key] = trained_conv_bias
+    # elif "bn" in key:
+    #     if key.rsplit('.', 1)[-1] in bn_dict:
+    #         new_params_toload['policy'][key] = bn_dict[key.rsplit('.', 1)[-1]] # get each parameters of bn
+    # elif "cnn_stage1.0.weight" in key:
+    #     new_params_toload['policy'][key] = trained_conv_weight
+    # elif "cnn_stage1.0.bias" in key:
+    #     new_params_toload['policy'][key] = trained_conv_bias
     else:
         new_params_toload['policy'][key] = value
 model2.set_parameters(new_params_toload, exact_match=False)
+
+from kernel_operations import transfer
+trained_conv_weight, trained_conv_bias, bn_dict = transfer(model2.policy, movie_obs, movie_label)
+
 model2.save('transferred_model.zip')
 # printing the norm of the weightings
 check_model = model2.get_parameters()['policy']

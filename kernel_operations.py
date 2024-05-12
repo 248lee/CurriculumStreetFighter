@@ -78,23 +78,23 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
   print(result.shape)
   return result
 
-class TransferModel(nn.Module):
-  def __init__(self, input_shape, num_of_filters) -> None:
-    super(TransferModel, self).__init__()
-    num_of_t_input_channels = input_shape[0]
-    self.bn = nn.BatchNorm2d(num_of_t_input_channels, affine=False)
-    self.conv = nn.Conv2d(num_of_t_input_channels, num_of_filters, kernel_size=8, stride=1, padding='same')
-    self.relu = nn.ReLU()
-    self.pool = nn.MaxPool2d(2, stride=2)
-    self.flatten = nn.Flatten()
+# class TransferModel(nn.Module):
+#   def __init__(self, input_shape, num_of_filters) -> None:
+#     super(TransferModel, self).__init__()
+#     num_of_t_input_channels = input_shape[0]
+#     self.bn = nn.BatchNorm2d(num_of_t_input_channels, affine=False)
+#     self.conv = nn.Conv2d(num_of_t_input_channels, num_of_filters, kernel_size=8, stride=1, padding='same')
+#     self.relu = nn.ReLU()
+#     self.pool = nn.MaxPool2d(2, stride=2)
+#     self.flatten = nn.Flatten()
 
-  def forward(self, x):
-    x = self.bn(x)
-    x = self.conv(x)
-    x = self.relu(x)
-    x = self.pool(x)
-    x = self.flatten(x)
-    return x
+#   def forward(self, x):
+#     x = self.bn(x)
+#     x = self.conv(x)
+#     x = self.relu(x)
+#     x = self.pool(x)
+#     x = self.flatten(x)
+#     return x
 
 class TransferDataset(Dataset):
     def __init__(self, data_list, label_list):
@@ -116,14 +116,21 @@ class TransferDataset(Dataset):
         return data, label
 
 
-def transfer(num_of_filters, training_set_inputs, training_set_grounds):
+def transfer(stage2_policy, training_set_inputs, training_set_grounds):
   loss_fn = nn.MSELoss()
-  trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
-  optimizer = th.optim.Adam(trans_model.parameters(), lr=5e-06)
+  # trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
+  trans_model = stage2_policy
+  optimizer = th.optim.Adam(trans_model.parameters(), lr=1e-06)
   EPOCH = 40
   REPORT_DUR = 4
   training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
   training_loader = DataLoader(training_dataset, batch_size=8, shuffle=True)
+
+  # Freeze the layers except cnn_stage1
+  for name, param in trans_model.named_parameters():
+    if not ("cnn_stage1" in name):
+      param.requires_grad = False
+
   for e in range(EPOCH):
     with tqdm(total=len(training_loader)) as pbar:
       running_loss = 0
@@ -136,11 +143,16 @@ def transfer(num_of_filters, training_set_inputs, training_set_grounds):
         optimizer.zero_grad()
 
         # Make predictions for this batch
-        outputs = trans_model(inputs)
+        outputs = trans_model.get_distribution(inputs).distribution.probs
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
         loss.backward()
+
+        # Print the gradients to check
+        # for name, param in trans_model.named_parameters():
+        #   print(f"{name} | {param.grad}")
+        # input()
 
         # Adjust learning weights
         optimizer.step()
