@@ -163,6 +163,9 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         pbar.set_description('EPOCH {},  batch {} loss: {}'.format(e, i, avg_loss))
         pbar.update()
     # pbar.clear()
-    # print('EPOCH {}: Loss {}'.format(e, last_loss))
+    
+   # Unfreeze the layers
+  for name, param in trans_model.named_parameters():
+    param.requires_grad = True
   
   return trans_model

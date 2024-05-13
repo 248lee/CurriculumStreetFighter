@@ -24,7 +24,7 @@ movie_label = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for i in range(32, 33): # 32 episodes
+for i in range(1, 33): # 32 episodes
     env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
     print('BATTLE:', i)
     done = False
