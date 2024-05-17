@@ -25,11 +25,11 @@ import gymnasium as gym
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 from network_structures import CustomFeatureExtractorCNN, Stage2CustomFeatureExtractorCNN
 
-NUM_ENV = 16
+NUM_ENV = 2
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=2
+STAGE=1
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -92,7 +92,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=512,
+            batch_size=32,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,
@@ -131,7 +131,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_stage2_ctl")
+    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="wang_test")
 
     # Writing the training logs from stdout to a file
     original_stdout = sys.stdout
@@ -141,7 +141,7 @@ def main():
         total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
-        tb_log_name='john_multiple_stage2_ctl',
+        tb_log_name='wang_test',
     )
     env.close()
 
@@ -149,7 +149,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_stage2_ctl.zip"))
+    model.save(os.path.join(save_dir, "ppo_sf2_wang_test.zip"))
 
 if __name__ == "__main__":
     main()
