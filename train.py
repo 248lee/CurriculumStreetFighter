@@ -66,15 +66,19 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    # Start
-    lr_schedule = linear_schedule(2.5e-6, 2.5e-10)
+    if STAGE == 1:
+        lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+    elif STAGE == 2:
+        lr_schedule = linear_schedule(5e-5, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     # Set linear scheduler for clip range
-    # Start
-    clip_range_schedule = linear_schedule(0.15, 0.025)
+    if STAGE == 1:
+        clip_range_schedule = linear_schedule(0.15, 0.02)
+    elif STAGE == 2:
+        clip_range_schedule = linear_schedule(0.03, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -92,7 +96,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=512,
+            batch_size=256,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,
@@ -107,7 +111,7 @@ def main():
         "n_steps": 512,
         "n_epochs": 4,
         "gamma": 0.94,
-        "batch_size": 512,
+        "batch_size": 256,
         "tensorboard_log": "logs"
         }
         model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
@@ -130,7 +134,8 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu_john_regression")
+    ExperimentName = "ppo_ryu_john_s2_please_success"
+    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
     original_stdout = sys.stdout
@@ -140,7 +145,7 @@ def main():
         total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
-        tb_log_name='john_multiple_regression',
+        tb_log_name=ExperimentName,
     )
     env.close()
 
@@ -148,7 +153,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final_regression.zip"))
+    model.save(os.path.join(save_dir, ExperimentName + "_final.zip"))
 
 if __name__ == "__main__":
     main()

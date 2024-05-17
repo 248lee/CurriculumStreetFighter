@@ -143,7 +143,9 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         optimizer.zero_grad()
 
         # Make predictions for this batch
-        outputs = trans_model.get_distribution(inputs).distribution.probs
+        prob = trans_model.get_distribution(inputs).distribution.probs
+        value = trans_model.predict_values(inputs)
+        outputs = th.cat((prob, value), dim=1)
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
@@ -167,5 +169,40 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
    # Unfreeze the layers
   for name, param in trans_model.named_parameters():
     param.requires_grad = True
+
+  # Fine Tune
+  for e in range(EPOCH):
+    with tqdm(total=len(training_loader)) as pbar:
+      running_loss = 0
+      last_loss = 0
+      for i, data in enumerate(training_loader):
+        # Every data instance is an input + label pair
+        inputs, labels = data
+
+        # Zero your gradients for every batch!
+        optimizer.zero_grad()
+
+        # Make predictions for this batch
+        prob = trans_model.get_distribution(inputs).distribution.probs
+        value = trans_model.predict_values(inputs)
+        outputs = th.cat((prob, value), dim=1)
+
+        # Compute the loss and its gradients
+        loss = loss_fn(outputs, labels)
+        loss.backward()
+
+        # Print the gradients to check
+        # for name, param in trans_model.named_parameters():
+        #   print(f"{name} | {param.grad}")
+        # input()
+
+        # Adjust learning weights
+        optimizer.step()
+
+        # Gather data and report
+        running_loss += loss.item()
+        avg_loss = running_loss / (i + 1)
+        pbar.set_description('EPOCH {},  batch {} loss: {}'.format(e, i, avg_loss))
+        pbar.update()
   
   return trans_model

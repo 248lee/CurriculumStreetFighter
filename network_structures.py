@@ -59,7 +59,7 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         n_input_channels = observation_space.shape[0]
         self.cnn_stage2 = nn.Sequential(
             nn.Conv2d(n_input_channels, conv_stage2_kernels, kernel_size=8, stride=1, padding='same'),
-            nn.ReLU(),
+            nn.PReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         self.bn = nn.BatchNorm2d(conv_stage2_kernels)

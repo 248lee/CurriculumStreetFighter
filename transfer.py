@@ -17,7 +17,7 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_avgpool_7000000_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_please_success_7000000_steps.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
@@ -34,8 +34,10 @@ for i in range(1, 33): # 32 episodes
         action, _states = model.predict(obs)
         obs_tensor, _ = policy.obs_to_tensor(obs)
         with th.no_grad():
-            label = policy.get_distribution(obs_tensor).distribution.probs
-            label = th.squeeze(label, 0)
+            prob = policy.get_distribution(obs_tensor).distribution.probs
+            prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
+            value = th.squeeze(policy.predict_values(obs_tensor), 0)
+            label = th.cat((prob, value))  # combine value and probs to a new label, shape [13]
             movie_label.append(label)
         # print(movie_label[-1].shape)
         # input("hello there")
@@ -166,8 +168,8 @@ model2 = PPO(
     env,
     device="cuda", 
     verbose=1,
-    n_steps=512,
-    batch_size=512,
+    n_steps=384,
+    batch_size=384,
     n_epochs=4,
     gamma=0.94,
     learning_rate=lr_schedule,
