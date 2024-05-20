@@ -17,7 +17,7 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_please_success_7000000_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_please_success_9000000_steps.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
