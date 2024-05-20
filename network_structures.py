@@ -134,6 +134,7 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         self.cnn_stage1 = nn.Sequential(
             nn.Conv2d(32 * 3, conv_stage1_kernels, groups=32, kernel_size=8, stride=1, padding='same'),
             nn.ReLU(),
+            nn.MaxPool2d(2, stride=2)
         )
         self.cnn = nn.Sequential(
             nn.Conv2d(conv_stage1_kernels, 64, kernel_size=4, stride=1, padding='same'),
