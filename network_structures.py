@@ -35,10 +35,6 @@ class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         )
         # Compute shape by doing one forward pass
         with th.no_grad():
-            print(self.cnn_stage1(self.avg(
-                th.as_tensor(observation_space.sample()[None]).float()
-            )).shape)
-            input("STAGE1 SHAPE HERE")
             n_flatten = self.cnn(self.cnn_stage1(self.avg(
                 th.as_tensor(observation_space.sample()[None]).float()
             ))).shape[1]
@@ -188,8 +184,6 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
             print(concatenated_output.shape)
             # Merge the outputs using the 1x1 convolutional layer
             merged_output = self.merge_conv(concatenated_output)
-            print(self.cnn_stage1(merged_output).shape)
-            input("SHAPE HERE")
             n_flatten = self.cnn(self.cnn_stage1(
                 merged_output
             )).shape[1]

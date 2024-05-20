@@ -16,7 +16,7 @@ env = retro.make(
             obs_type=retro.Observations.IMAGE    
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_with_maxpool_8000000_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_sf2_ryu_final_avg_pool_stage2.zip', env=env)
 movie_obs = []
 
 ordered_dict_of_params = model.get_parameters()['policy']
@@ -218,19 +218,32 @@ input()
 
 model2.set_parameters(old_params_toload, exact_match=False)
 
-model2.policy.features_extractor.cnn_stage2_sub1_input_1[0].load_state_dict(interpolated_kernel[:, 0, 0:1, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub2_input_1[0].load_state_dict(interpolated_kernel[:, 1, 0:1, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub3_input_1[0].load_state_dict(interpolated_kernel[:, 2, 0:1, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub4_input_1[0].load_state_dict(interpolated_kernel[:, 3, 0:1, :, :], strict=False)
+kernel_toload = OrderedDict()
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 0, 0:1, :, :])
+model2.policy.features_extractor.cnn_stage2_sub1_input_1[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 1, 0:1, :, :])
+model2.policy.features_extractor.cnn_stage2_sub2_input_1[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 2, 0:1, :, :])
+model2.policy.features_extractor.cnn_stage2_sub3_input_1[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 3, 0:1, :, :])
+model2.policy.features_extractor.cnn_stage2_sub4_input_1[0].load_state_dict(kernel_toload, strict=False)
 
-model2.policy.features_extractor.cnn_stage2_sub1_input_2[0].load_state_dict(interpolated_kernel[:, 0, 1:2, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub2_input_2[0].load_state_dict(interpolated_kernel[:, 1, 1:2, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub3_input_2[0].load_state_dict(interpolated_kernel[:, 2, 1:2, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub4_input_2[0].load_state_dict(interpolated_kernel[:, 3, 1:2, :, :], strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 0, 1:2, :, :])
+model2.policy.features_extractor.cnn_stage2_sub1_input_2[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 1, 1:2, :, :])
+model2.policy.features_extractor.cnn_stage2_sub2_input_2[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 2, 1:2, :, :])
+model2.policy.features_extractor.cnn_stage2_sub3_input_2[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 3, 1:2, :, :])
+model2.policy.features_extractor.cnn_stage2_sub4_input_2[0].load_state_dict(kernel_toload, strict=False)
 
-model2.policy.features_extractor.cnn_stage2_sub1_input_3[0].load_state_dict(interpolated_kernel[:, 0, 2:3, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub2_input_3[0].load_state_dict(interpolated_kernel[:, 1, 2:3, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub3_input_3[0].load_state_dict(interpolated_kernel[:, 2, 2:3, :, :], strict=False)
-model2.policy.features_extractor.cnn_stage2_sub4_input_3[0].load_state_dict(interpolated_kernel[:, 3, 2:3, :, :], strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 0, 2:3, :, :])
+model2.policy.features_extractor.cnn_stage2_sub1_input_3[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 1, 2:3, :, :])
+model2.policy.features_extractor.cnn_stage2_sub2_input_3[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 2, 2:3, :, :])
+model2.policy.features_extractor.cnn_stage2_sub3_input_3[0].load_state_dict(kernel_toload, strict=False)
+kernel_toload['weight'] = th.from_numpy(interpolated_kernel[:, 3, 2:3, :, :])
+model2.policy.features_extractor.cnn_stage2_sub4_input_3[0].load_state_dict(kernel_toload, strict=False)
 
 model2.save('transferred_model.zip')
