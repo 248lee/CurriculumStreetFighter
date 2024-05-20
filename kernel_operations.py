@@ -86,13 +86,13 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
   # axes[1][1].imshow(cut_features[target][3][0], vmin=four_min, vmax=four_max)
   # plt.show()
   
-  new_bias = []
-  for i in range(len(cut_features)):
-    new_bias.append(obias[i // 4])
+  # new_bias = []
+  # for i in range(len(cut_features)):
+  #   new_bias.append(obias[i // 4])
   print("features shape:", np.array(cut_features).shape) # (32, 4, 3, 8, 8)
   # input()
   
-  return np.array(cut_features), np.array(new_bias)
+  return np.array(cut_features)
   # ls = []
   # for i in range(len(cut_kernels)):
   #   ls.append(np.append(cut_kernels[i].reshape(-1), obias[i // 4])) # a original kernel is cut into 4 subkernels, so i needs to // 4

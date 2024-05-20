@@ -20,6 +20,8 @@ from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 import torch as th
 import torch.nn as nn
 import numpy as np
+from network_structures import Stage2CustomFeatureExtractorCNN
+from collections import OrderedDict
 
 RESET_ROUND = False  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
@@ -56,34 +58,43 @@ env = make_env(game, state="Champion.Level12.RyuVsBison_test")()
 # model = PPO("CnnPolicy", env)
 
 if not RANDOM_ACTION:
-    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME), env=env)
-    print(model.policy)
+    policy_kwargs = dict(
+        activation_fn=th.nn.ReLU,
+        net_arch=dict(pi=[], vf=[]),
+        features_extractor_class=Stage2CustomFeatureExtractorCNN,
+        features_extractor_kwargs=dict(features_dim=512),
+    )
+    model = PPO(
+        "CnnPolicy", 
+        env,
+        policy_kwargs=policy_kwargs
+    )
 
-    
+    frame_kernels = [OrderedDict() for i in range(3)]
+    for i in range(3):
+        frame_kernels[i]['weight'] = (2**i) * th.ones([32, 1, 8, 8])
+    model.policy.features_extractor.cnn_stage2_sub1_input_1[0].load_state_dict(frame_kernels[0], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub2_input_1[0].load_state_dict(frame_kernels[0], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub3_input_1[0].load_state_dict(frame_kernels[0], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub4_input_1[0].load_state_dict(frame_kernels[0], strict=False)
 
-    top_kernels = model.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight']
-    print(top_kernels[0].shape) # (3, 8, 8)
-    m = nn.Conv2d(3, 1, 8, padding='same', bias=False)
-    target = 18
-    m.load_state_dict({'weight': top_kernels[target].unsqueeze(0)}) # 4: shadow, 15: jumping enemy, 21: feat, 25: shadow
-    avg_pool = nn.AvgPool2d(kernel_size=(2, 2), stride=(2, 2))
+    model.policy.features_extractor.cnn_stage2_sub1_input_2[0].load_state_dict(frame_kernels[1], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub2_input_2[0].load_state_dict(frame_kernels[1], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub3_input_2[0].load_state_dict(frame_kernels[1], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub4_input_2[0].load_state_dict(frame_kernels[1], strict=False)
 
-    new_kernels = model.get_parameters()['policy']['features_extractor.cnn_stage2.0.weight']
-    M = nn.Conv2d(3, 3, 8, groups=3, padding='same', bias=False)
-    print("conv2 one kernel shape", M.state_dict()['weight'].shape) # [3, 1, 8, 8]
-    M.load_state_dict({'weight': new_kernels[target * 3 : target * 3 + 3, :, :, :]})
+    model.policy.features_extractor.cnn_stage2_sub1_input_3[0].load_state_dict(frame_kernels[2], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub2_input_3[0].load_state_dict(frame_kernels[2], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub3_input_3[0].load_state_dict(frame_kernels[2], strict=False)
+    model.policy.features_extractor.cnn_stage2_sub4_input_3[0].load_state_dict(frame_kernels[2], strict=False)
 
-    fig, axes = plt.subplots(nrows=3, ncols=2)
-    for c in range(0, 3):
-        print("m shape", m.state_dict()['weight'].shape)
-        print('M shape', M.state_dict()['weight'].shape)
-        _m = m.state_dict()['weight'][0][c].cpu().numpy()
-        _M = M.state_dict()['weight'][c][0].cpu().numpy()
-        vmin = np.min(_m)
-        vmax = np.max(_M)
-        axes[c][0].imshow(_m, vmin=vmin, vmax=vmax)
-        axes[c][1].imshow(_M, vmin=vmin, vmax=vmax)
-    plt.savefig("kernels.png")
+    merge_weight = th.zeros([96, 4, 1, 1])
+    merge_weight[0,:,:,:] = 1 / 4
+    merge_weight[1,:,:,:] = 1 / 8
+    merge_weight[2,:,:,:] = 1 / 16
+    merge_kernel = OrderedDict()
+    merge_kernel['weight'] = merge_weight
+    model.policy.features_extractor.merge_conv.load_state_dict(merge_kernel, strict=False)
 
 
 obs, _info = env.reset()
@@ -112,36 +123,7 @@ for _ in range(num_episodes):
             action, _states = model.predict(obs)
             obs, reward, done, trunc, info = env.step(action)
 
-            draw_obs = th.from_numpy(obs.transpose(2, 0, 1)).float()
-            with th.no_grad():
-                draw_obs_s1 = avg_pool(draw_obs)
-            print(draw_obs_s1.shape)
-            # Create a figure and axis objects
-            fig, axes = plt.subplots(nrows=2, ncols=2)
-
-            # Display the first image on the left
-            axes[0][0].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
-            axes[0][0].set_title('Before Conv')
-            with th.no_grad():
-                draw_obs_s1 = m(draw_obs_s1)
-                draw_obs_s1 = relu(draw_obs_s1)
-            # Display the second image on the right
-            pic = axes[0][1].imshow(th.Tensor.numpy(draw_obs_s1).transpose(1, 2, 0) / 255)
-            axes[0][1].set_title('After stage1 Conv')
-
-            with th.no_grad():
-                draw_obs_s2 = M(draw_obs)
-                draw_obs_s2 = relu(draw_obs_s2)
-                draw_obs_s2 = maxpool(draw_obs_s2)
-                draw_obs_s2 = m(draw_obs_s2)
-                draw_obs_s2 = relu(draw_obs_s2)
-            pic = axes[1][1].imshow(th.Tensor.numpy(draw_obs_s2).transpose(1, 2, 0) / 255)
-            fig.colorbar(pic, ax=axes[1][0])
-            axes[1][1].set_title('After stage2 Convs')
-            plt.show()
-        # for i in range(3):
-        #     plt.imshow(obs[:, :, i], cmap='gray')
-        #     plt.show()
+            
         if reward != 0:
             total_reward += reward
             print("Reward: {:.3f}, playerHP: {}, enemyHP:{}".format(reward, info['agent_hp'], info['enemy_hp']))

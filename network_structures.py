@@ -24,9 +24,6 @@ class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
             nn.ReLU(),
         )
         self.cnn = nn.Sequential(
-            nn.Conv2d(conv_stage1_kernels, conv_stage1_kernels, kernel_size=8, stride=1, padding='same'), # (32, 100, 128)
-            nn.ReLU(),
-            nn.MaxPool2d(2, stride=2), # (32, 50, 64)
             nn.Conv2d(conv_stage1_kernels, 64, kernel_size=4, stride=1, padding='same'),
             nn.ReLU(),
             nn.MaxPool2d(2, stride=2), # (64, 25, 32)
@@ -139,9 +136,6 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
             nn.ReLU(),
         )
         self.cnn = nn.Sequential(
-            nn.Conv2d(conv_stage1_kernels, conv_stage1_kernels, kernel_size=8, stride=1, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool2d(2, stride=2),
             nn.Conv2d(conv_stage1_kernels, 64, kernel_size=4, stride=1, padding='same'),
             nn.ReLU(),
             nn.MaxPool2d(2, stride=2),
@@ -165,20 +159,20 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
             output_sub2_input_3 = self.cnn_stage2_sub2_input_3(input_sub[:,2:3])
             output_sub3_input_3 = self.cnn_stage2_sub3_input_3(input_sub[:,2:3])
             output_sub4_input_3 = self.cnn_stage2_sub4_input_3(input_sub[:,2:3])
-            print(output_sub1_input_1.shape)
-            print(output_sub1_input_1)
-            print(output_sub2_input_1.shape)
-            print(output_sub2_input_1)
-            print(output_sub3_input_1.shape)
-            print(output_sub4_input_1.shape)
-            print(output_sub1_input_2.shape)
-            print(output_sub2_input_2.shape)
-            print(output_sub3_input_2.shape)
-            print(output_sub4_input_2.shape)
-            print(output_sub1_input_3.shape)
-            print(output_sub2_input_3.shape)
-            print(output_sub3_input_3.shape)
-            print(output_sub4_input_3.shape)
+            # print(output_sub1_input_1.shape)
+            # print(output_sub1_input_1)
+            # print(output_sub2_input_1.shape)
+            # print(output_sub2_input_1)
+            # print(output_sub3_input_1.shape)
+            # print(output_sub4_input_1.shape)
+            # print(output_sub1_input_2.shape)
+            # print(output_sub2_input_2.shape)
+            # print(output_sub3_input_2.shape)
+            # print(output_sub4_input_2.shape)
+            # print(output_sub1_input_3.shape)
+            # print(output_sub2_input_3.shape)
+            # print(output_sub3_input_3.shape)
+            # print(output_sub4_input_3.shape)
             alternating_outputs = []
             for i in range(output_sub1_input_1.size(1)):
                 alternating_outputs.extend([output_sub1_input_1[:,i], output_sub2_input_1[:,i],output_sub3_input_1[:,i], output_sub4_input_1[:,i],output_sub1_input_2[:,i], output_sub2_input_2[:,i],output_sub3_input_2[:,i], output_sub4_input_2[:,i],output_sub1_input_3[:,i], output_sub2_input_3[:,i],output_sub3_input_3[:,i], output_sub4_input_3[:,i]])
@@ -221,5 +215,16 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         #concatenated_output = th.cat((output_sub1_input_1, output_sub2_input_1, output_sub3_input_1, output_sub4_input_1,output_sub1_input_2, output_sub2_input_2, output_sub3_input_2, output_sub4_input_2,output_sub1_input_3, output_sub2_input_3, output_sub3_input_3, output_sub4_input_3), dim=0)
         # Merge the outputs using the 1x1 convolutional layer
         merged_output = self.merge_conv(concatenated_output)
+        # print(merged_output.shape)
+        # input()
+        # import matplotlib.pyplot as plt
+        # plt.imshow(merged_output[0, 0, :, :].cpu().numpy())
+        # plt.imshow(merged_output[0, 1, :, :].cpu().numpy())
+        # plt.imshow(merged_output[0, 2, :, :].cpu().numpy())
+        # plt.show()
+        # plt.imshow(merged_output[0, 3, :, :].cpu().numpy())
+        # plt.imshow(merged_output[0, 4, :, :].cpu().numpy())
+        # plt.imshow(merged_output[0, 5, :, :].cpu().numpy())
+        # plt.show()
 
         return self.linear(self.cnn(self.cnn_stage1(merged_output)))
