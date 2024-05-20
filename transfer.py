@@ -16,7 +16,7 @@ env = retro.make(
             obs_type=retro.Observations.IMAGE    
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_sf2_ryu_final_avg_pool_stage2.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_avgpool_7000000_steps.zip', env=env)
 movie_obs = []
 
 ordered_dict_of_params = model.get_parameters()['policy']
