@@ -23,7 +23,7 @@ ordered_dict_of_params = model.get_parameters()['policy']
 itr = iter(ordered_dict_of_params.items())
 old_top_kernel = next(itr)[1] # This gets the top item of the dict, which is the top kernel
 old_top_bias = next(itr)[1] # This gets the second item of the dict, which is the top bias
-interpolated_kernel, k_bias = john_bilinear(old_top_kernel, old_top_bias, conv_stage2_kernels)
+interpolated_kernel= john_bilinear(old_top_kernel, old_top_bias, conv_stage2_kernels)
 # picked_interpolated_kernel = []
 # for i in range(len(interpolated_kernel)):
 #     picked_interpolated_kernel.append(interpolated_kernel[i, 3, :, :, :]) # pick the right-bottom kernel piece
