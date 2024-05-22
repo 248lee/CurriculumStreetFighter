@@ -35,7 +35,7 @@ for i in range(1, 33): # 32 episodes
         obs_tensor, _ = policy.obs_to_tensor(obs)
         with th.no_grad():
             prob = policy.get_distribution(obs_tensor).distribution.probs
-            multiplier = 0.88
+            multiplier = 0.8
             prob = (prob - 0.5) * multiplier + 0.5  # e.g. if the prob is 1, it will be converted into 1.5
             # prob = sigmoid(prob)  # then put 1.5 into the sigmoid, get 0.818
             prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
