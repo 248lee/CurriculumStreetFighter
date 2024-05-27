@@ -69,7 +69,7 @@ def main():
     if STAGE == 1:
         lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
     elif STAGE == 2:
-        lr_schedule = linear_schedule(5e-5, 2.5e-10)
+        lr_schedule = linear_schedule(4.5e-5, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -115,7 +115,7 @@ def main():
         "tensorboard_log": "logs"
         }
         model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
-        input("Press ENTER to continue...")
+        # input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"
     os.makedirs(save_dir, exist_ok=True)
@@ -134,7 +134,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_s2_please_success_sigmoid"
+    ExperimentName = "ppo_ryu_john_s2_please_success_exp2_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -142,7 +142,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(15000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

@@ -171,6 +171,7 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
     param.requires_grad = True
 
   # Fine Tune
+  EPOCH = 20
   for e in range(EPOCH):
     with tqdm(total=len(training_loader)) as pbar:
       running_loss = 0

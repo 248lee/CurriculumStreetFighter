@@ -17,7 +17,7 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_please_success_9000000_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_s2_please_success_exp2_final.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
@@ -35,7 +35,7 @@ for i in range(1, 33): # 32 episodes
         obs_tensor, _ = policy.obs_to_tensor(obs)
         with th.no_grad():
             prob = policy.get_distribution(obs_tensor).distribution.probs
-            multiplier = 0.8
+            multiplier = 0.88
             prob = (prob - 0.5) * multiplier + 0.5  # e.g. if the prob is 1, it will be converted into 1.5
             # prob = sigmoid(prob)  # then put 1.5 into the sigmoid, get 0.818
             prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
@@ -231,7 +231,7 @@ model2.policy = transferred_policy
 print("=======")
 print(model2.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight'][0][0])
 
-model2.save('transferred_model.zip')
+model2.save('trained_models/transferred_model.zip')
 # printing the norm of the weightings
 check_model = model2.get_parameters()['policy']
 print(np.linalg.norm(check_model['features_extractor.cnn_stage2.0.weight'].cpu().numpy()))
