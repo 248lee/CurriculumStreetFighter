@@ -171,12 +171,19 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
     param.requires_grad = True
 
   # Fine Tune
+  training_set_grounds_finetune = []
+  for i in range(len(training_set_grounds)):
+    multiplier = 0.88
+    training_set_grounds_finetune.append((training_set_grounds[i] - 0.5) * multiplier + 0.5)  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
+  training_dataset_finetune = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds_finetune)
+  training_loader_finetune = DataLoader(training_dataset_finetune, batch_size=8, shuffle=True)
+  
   EPOCH = 20
   for e in range(EPOCH):
-    with tqdm(total=len(training_loader)) as pbar:
+    with tqdm(total=len(training_loader_finetune)) as pbar:
       running_loss = 0
       last_loss = 0
-      for i, data in enumerate(training_loader):
+      for i, data in enumerate(training_loader_finetune):
         # Every data instance is an input + label pair
         inputs, labels = data
 
