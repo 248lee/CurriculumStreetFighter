@@ -170,14 +170,18 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
   for name, param in trans_model.named_parameters():
     param.requires_grad = True
 
+  print(training_set_grounds[76])
   # Fine Tune
-  training_set_grounds_finetune = []
-  for i in range(len(training_set_grounds)):
-    multiplier = 0.88
-    training_set_grounds_finetune.append((training_set_grounds[i] - 0.5) * multiplier + 0.5)  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
+  with th.no_grad():
+    training_set_grounds_finetune = []
+    for i in range(len(training_set_grounds)):
+      multiplier = 0.83
+      for j in range(12):
+        training_set_grounds[i][j] = (training_set_grounds[i][j] - 0.5) * multiplier + 0.5
+      training_set_grounds_finetune.append(training_set_grounds[i])  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
   training_dataset_finetune = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds_finetune)
   training_loader_finetune = DataLoader(training_dataset_finetune, batch_size=8, shuffle=True)
-  
+  print(training_set_grounds_finetune[76])
   EPOCH = 20
   for e in range(EPOCH):
     with tqdm(total=len(training_loader_finetune)) as pbar:
