@@ -67,7 +67,7 @@ def main():
 
     # Set linear schedule for learning rate
     if STAGE == 1:
-        lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+        lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
         lr_schedule = linear_schedule(4.5e-5, 2.5e-10)
 
@@ -96,7 +96,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=256,
+            batch_size=512,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,
@@ -133,8 +133,8 @@ def main():
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
-    checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_please_success_exp2gai_s2"
+    checkpoint_interval = 31250 * 6 # checkpoint_interval * num_envs = total_steps_per_checkpoint
+    ExperimentName = "ppo_ryu_john_small_res_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
