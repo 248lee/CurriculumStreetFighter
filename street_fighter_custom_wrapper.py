@@ -100,8 +100,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                 time.sleep(0.01)
 
         curr_player_health = info['agent_hp']
-        curr_oppont_health = info['enemy_hp']
-        
+        curr_oppont_health = info['enemy_hp']        
         self.total_timesteps += self.num_step_frames
         
         # Game is over and player loses.
@@ -116,7 +115,10 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                                                                    # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
 
             # custom_reward = math.pow(self.full_hp, (5940 - self.total_timesteps) / 5940) * self.reward_coeff # Use the remaining time steps as reward.
-            custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
+            if info['round_countdown'] < 27326:  # if the countdown is less then 69 seconds, give reward
+                custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
+            else:
+                custom_reward = 0
             custom_done = True
 
         # While the fighting is still going on
