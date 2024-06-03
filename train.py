@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -96,7 +96,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=512,
+            batch_size=256,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,
@@ -112,7 +112,8 @@ def main():
         "n_epochs": 4,
         "gamma": 0.94,
         "batch_size": 256,
-        "tensorboard_log": "logs"
+        "tensorboard_log": "logs",
+        "verbose": 1
         }
         model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
         # input("Press ENTER to continue...")
@@ -134,7 +135,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 6 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_bigger_batchsize"
+    ExperimentName = "ppo_ryu_john_short_punish_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -142,7 +143,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(15000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(25000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,
