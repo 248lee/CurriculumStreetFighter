@@ -36,7 +36,7 @@ def john_bilinear(oarr, obias, new_num_of_kernels):
       # points = np.vstack([x_i.ravel(), y_i.ravel()]).T
       # z_i = interp(points)
       # z_i = z_i.reshape(x_i.shape)
-      z_i = cv2.resize(old_kernel, (old_kernel.shape[0] * 2, old_kernel.shape[1] * 2), interpolation=cv2.INTER_LINEAR)
+      z_i = cv2.resize(old_kernel, (old_kernel.shape[0] * 2, old_kernel.shape[1] * 2), interpolation=cv2.INTER_CUBIC)
       interpolated_piece.append(z_i)
     interpolated_piece = np.array(interpolated_piece)
     interpolated_kernels.append(interpolated_piece)
@@ -120,7 +120,7 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
   loss_fn = nn.MSELoss()
   # trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
   trans_model = stage2_policy
-  optimizer = th.optim.Adam(trans_model.parameters(), lr=1e-06)
+  optimizer = th.optim.Adam(trans_model.parameters(), lr=5e-06)
   EPOCH = 40
   REPORT_DUR = 4
   training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
