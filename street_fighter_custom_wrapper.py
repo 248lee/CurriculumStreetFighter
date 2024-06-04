@@ -101,7 +101,6 @@ class StreetFighterCustomWrapper(gym.Wrapper):
 
         curr_player_health = info['agent_hp']
         curr_oppont_health = info['enemy_hp']
-        print(info['round_countdown'])    
         self.total_timesteps += self.num_step_frames
         
         # Game is over and player loses.
