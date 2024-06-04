@@ -118,6 +118,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             if info['round_countdown'] < 27326:  # if the countdown is less then 69 seconds, give reward
                 custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
             else:
+                print("overfitting")
                 custom_reward = 0
             custom_done = True
 

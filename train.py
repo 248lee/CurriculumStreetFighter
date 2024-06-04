@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -96,7 +96,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=512,
+            batch_size=256,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,

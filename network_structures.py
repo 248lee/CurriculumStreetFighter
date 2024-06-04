@@ -82,7 +82,6 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
             n_flatten = self.cnn(self.cnn_stage1(self.bn(self.cnn_stage2(
                 th.as_tensor(observation_space.sample()[None]).float()
             )))).shape[1]
-
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
