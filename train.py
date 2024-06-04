@@ -96,7 +96,7 @@ def main():
             device="cuda", 
             verbose=1,
             n_steps=512,
-            batch_size=256,
+            batch_size=512,
             n_epochs=4,
             gamma=0.94,
             learning_rate=lr_schedule,
