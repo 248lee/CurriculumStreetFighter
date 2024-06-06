@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-resume_model_name = 'ppo_ryu_john_please_success_exp2gai_s2_final.zip'
+resume_model_name = 'ppo_ryu_john_stay_longer_huge_final.zip'
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -66,7 +66,7 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    lr_schedule = linear_schedule(1.6e-9, 2.5e-10)
+    lr_schedule = 4.5e-5
 
 
     # Set linear scheduler for clip range
@@ -88,7 +88,7 @@ def main():
     "n_steps": 512,
     "n_epochs": 4,
     "gamma": 0.94,
-    "batch_size": 256,
+    "batch_size": 512,
     "tensorboard_log": "logs"
     }
     model = PPO.load('trained_models/'+resume_model_name, env=env, device="cuda", custom_objects=custom_objects)
@@ -111,7 +111,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_please_success_exp2gai_s2"
+    ExperimentName = "ppo_ryu_john_stay_longer_huge"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -119,7 +119,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(15000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

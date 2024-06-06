@@ -135,7 +135,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_short_punish_smooth_s2"
+    ExperimentName = "ppo_ryu_john_stay_longer_huge_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -143,7 +143,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(25000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

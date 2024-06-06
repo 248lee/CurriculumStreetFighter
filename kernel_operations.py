@@ -120,8 +120,8 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
   loss_fn = nn.MSELoss()
   # trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
   trans_model = stage2_policy
-  optimizer = th.optim.Adam(trans_model.parameters(), lr=5e-06)
-  EPOCH = 40 
+  optimizer = th.optim.Adam(trans_model.parameters(), lr=1e-06)
+  EPOCH = 60 
   REPORT_DUR = 4
   training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
   training_loader = DataLoader(training_dataset, batch_size=8, shuffle=True)
@@ -179,14 +179,14 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
   with th.no_grad():
     training_set_grounds_finetune = []
     for i in range(len(training_set_grounds)):
-      multiplier = 0.56
+      multiplier = 0.88
       for j in range(12):
         training_set_grounds[i][j] = (training_set_grounds[i][j] - 0.5) * multiplier + 0.5
       training_set_grounds_finetune.append(training_set_grounds[i])  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
   training_dataset_finetune = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds_finetune)
   training_loader_finetune = DataLoader(training_dataset_finetune, batch_size=8, shuffle=True)
   print(training_set_grounds_finetune[76])
-  EPOCH = 17
+  EPOCH = 36
   for e in range(EPOCH):
     with tqdm(total=len(training_loader_finetune)) as pbar:
       running_loss = 0
