@@ -34,6 +34,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
 
         self.total_timesteps = 0
 
+        self.welfare_length = 50
+
         self.full_hp = 176
         self.prev_player_health = self.full_hp
         self.prev_oppont_health = self.full_hp
@@ -63,6 +65,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         self.prev_oppont_health = self.full_hp
 
         self.total_timesteps = 0
+
+        self.welfare_countdown = self.welfare_length
         
         # Clear the frame stack and add the first observation [num_frames] times
         self.frame_stack.clear()
@@ -102,25 +106,29 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         curr_player_health = info['agent_hp']
         curr_oppont_health = info['enemy_hp']
         self.total_timesteps += self.num_step_frames
-        
-        # Game is over and player loses.
-        if curr_player_health < 0:
-            custom_reward = -math.pow(self.full_hp, (curr_oppont_health + 1) / (self.full_hp + 1))    # Use the remaining health points of opponent as penalty. 
-                                                   # If the opponent also has negative health points, it's a even game and the reward is +1.
+        if self.welfare_countdown == 0:
             custom_done = True
+            # Game is over and player loses.
+            if curr_player_health < 0:
+                custom_reward = -math.pow(self.full_hp, (curr_oppont_health + 1) / (self.full_hp + 1))    # Use the remaining health points of opponent as penalty. 
+                                                    # If the opponent also has negative health points, it's a even game and the reward is +1.
 
-        # Game is over and player wins.
-        elif curr_oppont_health < 0:
-            # custom_reward = curr_player_health * self.reward_coeff # Use the remaining health points of player as reward.
-                                                                   # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
+            # Game is over and player wins.
+            elif curr_oppont_health < 0:
+                # custom_reward = curr_player_health * self.reward_coeff # Use the remaining health points of player as reward.
+                                                                    # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
 
-            # custom_reward = math.pow(self.full_hp, (5940 - self.total_timesteps) / 5940) * self.reward_coeff # Use the remaining time steps as reward.
-            # 35097 -> 89 sec.  26901 -> 69 sec.
-            # countdown_multiplier = min(max((35907 - info['round_countdown']) / (35907 - 26901), 0), 1.0)  # keep the multiplier between 0 and 1
-            custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
-            custom_done = True
-
-        # While the fighting is still going on
+                # custom_reward = math.pow(self.full_hp, (5940 - self.total_timesteps) / 5940) * self.reward_coeff # Use the remaining time steps as reward.
+                # 35097 -> 89 sec.  26901 -> 69 sec.
+                # countdown_multiplier = min(max((35907 - info['round_countdown']) / (35907 - 26901), 0), 1.0)  # keep the multiplier between 0 and 1
+                custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
+        # If the fighting ends, wait for welfare
+        elif curr_player_health < 0 or curr_oppont_health < 0:                
+            # waiting for the welfare
+            custom_reward = 0
+            self.welfare_countdown -= 1
+            custom_done = False
+        # If the fighting is still going on
         else:
             custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
             if custom_reward == 0:
