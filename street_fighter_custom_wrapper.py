@@ -124,7 +124,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         else:
             custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
             if custom_reward == 0:
-                custom_reward = 2
+                custom_reward = 6
             self.prev_player_health = curr_player_health
             self.prev_oppont_health = curr_oppont_health
             custom_done = False
@@ -134,7 +134,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             custom_done = False
                      
         # Max reward is 6 * full_hp = 1054 (damage * 3 + winning_reward * 3) norm_coefficient = 0.001
-        return self._stack_observation(), 0.001 * custom_reward, custom_done, _trunc, info # reward normalization
+        return self._stack_observation(), (0.001 / 2) * custom_reward, custom_done, _trunc, info # reward normalization
     
 class TransferStreetFighterCustomWrapper(gym.Wrapper):
     def __init__(self, env, reset_round=True, rendering=False):

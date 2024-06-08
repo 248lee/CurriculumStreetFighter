@@ -69,7 +69,7 @@ def main():
     if STAGE == 1:
         lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
-        lr_schedule = linear_schedule(4.5e-5, 2.5e-10)
+        lr_schedule = linear_schedule(1.5e-4, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -78,7 +78,7 @@ def main():
     if STAGE == 1:
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
-        clip_range_schedule = linear_schedule(0.03, 0.02)
+        clip_range_schedule = linear_schedule(0.12, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -135,7 +135,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_stay_longer_hugehuge"
+    ExperimentName = "ppo_ryu_john_stay_longer_triplehuge"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

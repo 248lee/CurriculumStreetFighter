@@ -17,46 +17,47 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_stay_longer_huge_20002432_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_stay_longer_hugehuge_final.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for i in range(1, 33): # 32 episodes
-    env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
-    print('BATTLE:', i)
-    done = False
-    obs, info = env.reset()
-    total_reward = 0
-    while not done:
-        action, _states = model.predict(obs)
-        obs_tensor, _ = policy.obs_to_tensor(obs)
-        with th.no_grad():
-            prob = policy.get_distribution(obs_tensor).distribution.probs
-            prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
-            value = th.squeeze(policy.predict_values(obs_tensor), 0)
-            label = th.cat((prob, value))  # combine value and probs to a new label, shape [13]
-            movie_label.append(label)
-        # print(movie_label[-1].shape)
-        # input("hello there")
-        obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
-        movie_obs.append(obs_tensor)
-        movie_action.append(action)
+for _ in range(3):
+    for i in range(1, 33): # 32 episodes
+        env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
+        print('BATTLE:', i)
+        done = False
+        obs, info = env.reset()
+        total_reward = 0
+        while not done:
+            action, _states = model.predict(obs)
+            obs_tensor, _ = policy.obs_to_tensor(obs)
+            with th.no_grad():
+                prob = policy.get_distribution(obs_tensor).distribution.probs
+                prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
+                value = th.squeeze(policy.predict_values(obs_tensor), 0)
+                label = th.cat((prob, value))  # combine value and probs to a new label, shape [13]
+                movie_label.append(label)
+            # print(movie_label[-1].shape)
+            # input("hello there")
+            obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
+            movie_obs.append(obs_tensor)
+            movie_action.append(action)
 
-        obs, reward, done, trunc, info = env.step(action)
-        if reward != 0:
-            total_reward += reward
-            print("Reward: {:.3f}, playerHP: {}, enemyHP:{}".format(reward, info['agent_hp'], info['enemy_hp']))
-        
-        if info['enemy_hp'] < 0 or info['agent_hp'] < 0:
-            done = True
-    if info['enemy_hp'] < 0:
-        print("Victory!")
-    else:
-        print('Lose...')
-    print("Total reward: {}\n".format(total_reward))
+            obs, reward, done, trunc, info = env.step(action)
+            if reward != 0:
+                total_reward += reward
+                print("Reward: {:.3f}, playerHP: {}, enemyHP:{}".format(reward, info['agent_hp'], info['enemy_hp']))
+            
+            if info['enemy_hp'] < 0 or info['agent_hp'] < 0:
+                done = True
+        if info['enemy_hp'] < 0:
+            print("Victory!")
+        else:
+            print('Lose...')
+        print("Total reward: {}\n".format(total_reward))
 env.close()
 ordered_dict_of_params = model.get_parameters()['policy']
 itr = iter(ordered_dict_of_params.items())
