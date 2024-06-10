@@ -17,14 +17,14 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_stay_longer_hugehuge_final.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_Dmall_long_rew_final.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for _ in range(3):
+for _ in range(2):
     for i in range(1, 33): # 32 episodes
         env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
         print('BATTLE:', i)
