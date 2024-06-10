@@ -32,7 +32,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
 
         self.reward_coeff = 3.0
 
-        self.finish_reward_coeff = 6.0
+        self.finish_reward_coeff = 3
 
         self.total_timesteps = 0
 
@@ -123,7 +123,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                 # custom_reward = math.pow(self.full_hp, (5940 - self.total_timesteps) / 5940) * self.reward_coeff # Use the remaining time steps as reward.
                 # 35097 -> 89 sec.  26901 -> 69 sec.
                 # countdown_multiplier = min(max((35907 - info['round_countdown']) / (35907 - 26901), 0), 1.0)  # keep the multiplier between 0 and 1
-                custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.finish_reward_coeff
+                custom_reward = (self.full_hp * (curr_player_health + 1) / (self.full_hp + 1)) * self.finish_reward_coeff
         # If the fighting ends, wait for welfare
         elif curr_player_health < 0 or curr_oppont_health < 0:                
             # waiting for the welfare
@@ -134,7 +134,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         else:
             custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
             if custom_reward == 0:
-                custom_reward = 0.5
+                custom_reward = 1
             self.prev_player_health = curr_player_health
             self.prev_oppont_health = curr_oppont_health
             custom_done = False
