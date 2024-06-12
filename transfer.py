@@ -17,16 +17,19 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_linear_victory_final.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_honda_comes_10000000_steps.zip', env=env)
 policy = model.policy
 movie_obs = []
 movie_label = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for _ in range(2):
+for enemy in range(2):
     for i in range(1, 33): # 32 episodes
-        env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
+        if enemy == 0:
+            env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
+        elif enemy == 1:
+            env.reset(state='Champion.Level12.RyuVsHonda_{}.state'.format(i))
         print('BATTLE:', i)
         done = False
         obs, info = env.reset()
