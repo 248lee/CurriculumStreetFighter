@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 # Custom environment wrapper
 class StreetFighterCustomWrapper(gym.Wrapper):
-    def __init__(self, env, reset_round=True, rendering=False):
+    def __init__(self, env, reset_round=True, rendering=False, load_state_name=""):
         super(StreetFighterCustomWrapper, self).__init__(env)
         self.env = env
 
@@ -47,6 +47,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         self.reset_round = reset_round
         self.rendering = rendering
 
+        self.load_state_name = load_state_name
+
     def seed(self, arg1):
         pass
 
@@ -60,9 +62,16 @@ class StreetFighterCustomWrapper(gym.Wrapper):
     def reset(self, seed=None):
         observation, info = self.env.reset()
         random.seed(seed)
-        s = random.randint(1, 32)
-        self.env.load_state('Champion.Level12.RyuVsBison_' + str(s) + '.state')
-        
+        if self.load_state_name == "":
+            s = random.randint(1, 32)
+            enemy = random.randint(0, 1)
+            if enemy == 0:
+                self.env.load_state('Champion.Level12.RyuVsBison_' + str(s) + '.state')
+            else:
+                self.env.load_state('Champion.Level12.RyuVsHonda_' + str(s) + '.state')
+        else:
+            self.env.load_state(self.load_state_name)
+
         self.prev_player_health = self.full_hp
         self.prev_oppont_health = self.full_hp
 
@@ -124,15 +133,17 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                 # 35097 -> 89 sec.  26901 -> 69 sec.
                 # countdown_multiplier = min(max((35907 - info['round_countdown']) / (35907 - 26901), 0), 1.0)  # keep the multiplier between 0 and 1
                 custom_reward = (self.full_hp * (curr_player_health + 1) / (self.full_hp + 1)) * self.finish_reward_coeff
+            else:
+                custom_reward = 0
         # If the fighting ends, wait for welfare
-        elif curr_player_health < 0 or curr_oppont_health < 0:                
+        elif curr_player_health < 0 or curr_oppont_health < 0 or info['round_countdown'] == 0:                
             # waiting for the welfare
             custom_reward = 0
             self.welfare_countdown -= 1
             custom_done = False
         # If the fighting is still going on
         else:
-            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
+            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * 1.68
             if custom_reward == 0:
                 custom_reward = 1
             self.prev_player_health = curr_player_health
