@@ -64,7 +64,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         random.seed(seed)
         if self.load_state_name == "":
             s = random.randint(1, 32)
-            enemy = random.randint(0, 1)
+            enemy = 0
             if enemy == 0:
                 self.env.load_state('Champion.Level12.RyuVsBison_' + str(s) + '.state')
             else:

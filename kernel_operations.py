@@ -116,18 +116,19 @@ class TransferDataset(Dataset):
         return data, label
 
 
-def transfer(stage2_policy, training_set_inputs, training_set_grounds):
+def transfer(stage2_policy, training_set_inputs, training_set_probs, training_set_values):
   loss_fn = nn.MSELoss()
   # trans_model = TransferModel(training_set_inputs[0].shape, num_of_filters).cuda()
   trans_model = stage2_policy
   optimizer = th.optim.Adam(trans_model.parameters(), lr=1e-06)
-  EPOCH = 60 
+  EPOCH = 0
   REPORT_DUR = 4
-  training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds)
+  training_dataset = TransferDataset(data_list=training_set_inputs, label_list=training_set_probs)
   training_loader = DataLoader(training_dataset, batch_size=8, shuffle=True)
 
   # Freeze the layers except cnn_stage1
   for name, param in trans_model.named_parameters():
+    print(name)
     if not (("cnn_stage1" in name) or ("bn" in name)):
       param.requires_grad = False
 
@@ -143,9 +144,7 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         optimizer.zero_grad()
 
         # Make predictions for this batch
-        prob = trans_model.get_distribution(inputs).distribution.probs
-        value = trans_model.predict_values(inputs)
-        outputs = th.cat((prob, value), dim=1)
+        outputs = trans_model.get_distribution(inputs).distribution.probs
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
@@ -166,32 +165,25 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         pbar.update()
     # pbar.clear()
     
-  # Unfreeze the layers
-  # Freeze the layers except cnn_stage2
+  # value function transferring
+  # Freeze the layers except value net
+  optimizer = th.optim.Adam(trans_model.parameters(), lr=1e-06)
+  EPOCH = 0 
+  REPORT_DUR = 4
+  training_dataset_value = TransferDataset(data_list=training_set_inputs, label_list=training_set_values)
+  training_loader_value = DataLoader(training_dataset_value, batch_size=8, shuffle=True)
   for name, param in trans_model.named_parameters():
-    if (("cnn_stage2" in name)):
+    print(name)
+    if not (("value_net" in name)):
       param.requires_grad = False
     else:
       param.requires_grad = True
 
-  print(training_set_grounds[76])
-  # Fine Tune
-  with th.no_grad():
-    training_set_grounds_finetune = []
-    for i in range(len(training_set_grounds)):
-      multiplier = 0.77
-      for j in range(12):
-        training_set_grounds[i][j] = (training_set_grounds[i][j] - 0.5) * multiplier + 0.5
-      training_set_grounds_finetune.append(training_set_grounds[i])  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
-  training_dataset_finetune = TransferDataset(data_list=training_set_inputs, label_list=training_set_grounds_finetune)
-  training_loader_finetune = DataLoader(training_dataset_finetune, batch_size=8, shuffle=True)
-  print(training_set_grounds_finetune[76])
-  EPOCH = 15
   for e in range(EPOCH):
-    with tqdm(total=len(training_loader_finetune)) as pbar:
+    with tqdm(total=len(training_loader_value)) as pbar:
       running_loss = 0
       last_loss = 0
-      for i, data in enumerate(training_loader_finetune):
+      for i, data in enumerate(training_loader_value):
         # Every data instance is an input + label pair
         inputs, labels = data
 
@@ -199,9 +191,7 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         optimizer.zero_grad()
 
         # Make predictions for this batch
-        prob = trans_model.get_distribution(inputs).distribution.probs
-        value = trans_model.predict_values(inputs)
-        outputs = th.cat((prob, value), dim=1)
+        outputs = trans_model.predict_values(inputs)
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
@@ -220,5 +210,58 @@ def transfer(stage2_policy, training_set_inputs, training_set_grounds):
         avg_loss = running_loss / (i + 1)
         pbar.set_description('EPOCH {},  batch {} loss: {}'.format(e, i, avg_loss))
         pbar.update()
+  # Unfreeze the layers
+  # Unfreeze the layers except cnn_stage2 and value net
+  for name, param in trans_model.named_parameters():
+    if (("cnn_stage2" in name) or ("value_net" in name)):
+      param.requires_grad = False
+    else:
+      param.requires_grad = True
+
+  # Fine Tune
+  with th.no_grad():
+    training_set_probs_finetune = []
+    for i in range(len(training_set_probs)):
+      multiplier = 0.77
+      tmp = th.clone(training_set_probs[i])
+      for j in range(12):
+        tmp[j] = th.clone((training_set_probs[i][j] - 0.5) * multiplier + 0.5)
+      training_set_probs_finetune.append(tmp)  # e.g. if the prob is 1, it will be converted into 0.5+0.5*multiplier
+  training_dataset_finetune = TransferDataset(data_list=training_set_inputs, label_list=training_set_probs_finetune)
+  training_loader_finetune = DataLoader(training_dataset_finetune, batch_size=8, shuffle=True)
+  print(training_set_probs_finetune[76])
+  EPOCH = 0
+  for e in range(EPOCH):
+    with tqdm(total=len(training_loader_finetune)) as pbar:
+      running_loss = 0
+      last_loss = 0
+      for i, data in enumerate(training_loader_finetune):
+        # Every data instance is an input + label pair
+        inputs, labels = data
+
+        # Zero your gradients for every batch!
+        optimizer.zero_grad()
+
+        # Make predictions for this batch
+        outputs = trans_model.get_distribution(inputs).distribution.probs
+
+        # Compute the loss and its gradients
+        loss = loss_fn(outputs, labels)
+        loss.backward()
+
+        # Print the gradients to check
+        # for name, param in trans_model.named_parameters():
+        #   print(f"{name} | {param.grad}")
+        # input()
+
+        # Adjust learning weights
+        optimizer.step()
+
+        # Gather data and report
+        running_loss += loss.item()
+        avg_loss = running_loss / (i + 1)
+        pbar.set_description('EPOCH {},  batch {} loss: {}'.format(e, i, avg_loss))
+        pbar.update()
+
   
   return trans_model

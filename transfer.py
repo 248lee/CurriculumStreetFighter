@@ -17,15 +17,16 @@ env = retro.make(
             render_mode='rgb_array'  
         )
 env = TransferStreetFighterCustomWrapper(env)
-model = PPO.load('trained_models/ppo_ryu_john_honda_comes_10000000_steps.zip', env=env)
+model = PPO.load('trained_models/ppo_ryu_john_honda_comes_lowres_11002432_steps.zip', env=env)
 policy = model.policy
 movie_obs = []
-movie_label = []
+movie_probs = []
+movie_values = []
 movie_action = []
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from stable_baselines3.common.distributions import BernoulliDistribution
-for enemy in range(2):
-    for i in range(1, 33): # 32 episodes
+for enemy in range(1):
+    for i in range(32, 33): # 32 episodes
         if enemy == 0:
             env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
         elif enemy == 1:
@@ -35,15 +36,15 @@ for enemy in range(2):
         obs, info = env.reset()
         total_reward = 0
         while not done:
-            action, _states = model.predict(obs)
-            obs_tensor, _ = policy.obs_to_tensor(obs)
             with th.no_grad():
+                action, _states = model.predict(obs)
+                obs_tensor, _ = policy.obs_to_tensor(obs)
                 prob = policy.get_distribution(obs_tensor).distribution.probs
                 prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
                 value = th.squeeze(policy.predict_values(obs_tensor), 0)
-                label = th.cat((prob, value))  # combine value and probs to a new label, shape [13]
-                movie_label.append(label)
-            # print(movie_label[-1].shape)
+                movie_probs.append(prob)
+                movie_values.append(value)
+            # print(movie_probs[-1].shape)
             # input("hello there")
             obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
             movie_obs.append(obs_tensor)
@@ -226,7 +227,7 @@ obs_tensor, _ = model2.policy.obs_to_tensor(obs)
 
 print(model2.get_parameters()['policy']['features_extractor.cnn_stage1.0.weight'][0][0])
 from kernel_operations import transfer
-transferred_policy = transfer(model2.policy, movie_obs, movie_label)
+transferred_policy = transfer(model2.policy, movie_obs, movie_probs, movie_values)
 
 model2.policy = transferred_policy
 print("=======")

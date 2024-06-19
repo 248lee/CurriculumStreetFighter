@@ -69,7 +69,7 @@ def main():
     if STAGE == 1:
         lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
-        lr_schedule = linear_schedule(1e-5, 2.5e-10)
+        lr_schedule = linear_schedule(5e-5, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -78,7 +78,7 @@ def main():
     if STAGE == 1:
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
-        clip_range_schedule = linear_schedule(0.03, 0.02)
+        clip_range_schedule = linear_schedule(0.04, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -115,7 +115,7 @@ def main():
         "tensorboard_log": "logs",
         "verbose": 1
         }
-        model = PPO.load('trained_models/transferred_model.zip', env=env, device="cuda", custom_objects=custom_objects)
+        model = PPO.load('trained_models/transferred_model2.zip', env=env, device="cuda", custom_objects=custom_objects)
         # input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"
@@ -134,8 +134,13 @@ def main():
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
+
+    # Unfreeze all the layers
+    for name, param in model.policy.named_parameters():
+        param.requires_grad = True
+
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_honda_comes_lowres"
+    ExperimentName = "ppo_ryu_john_no_honda"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

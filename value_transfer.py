@@ -14,22 +14,22 @@ import os
 import sys
 
 import retro
+from trppo import TRPPO
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecTransposeImage, DummyVecEnv
 import torch as th
 
-import gymnasium as gym
 
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
-from network_structures import CustomFeatureExtractorCNN, Stage2CustomFeatureExtractorCNN
+from value_transfer_policy import TransferActorCriticPolicy
+from network_structures import WhiteFeatureExtractorCNN
 
 NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-resume_model_name = 'ppo_ryu_john_honda_comes_lowres_final.zip'
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -66,19 +66,20 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    lr_schedule = 8e-5
+    lr_schedule = linear_schedule(5e-4, 2.5e-10)
 
+    # fine-tune
+    # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     # Set linear scheduler for clip range
-    clip_range_schedule = 0.022
+    clip_range_schedule = linear_schedule(0.2, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
     policy_kwargs = dict(
         activation_fn=th.nn.ReLU,
         net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=CustomFeatureExtractorCNN,
-        features_extractor_kwargs=dict(features_dim=512),
+        features_extractor_class=WhiteFeatureExtractorCNN
     )
 
     
@@ -89,10 +90,32 @@ def main():
     "n_epochs": 4,
     "gamma": 0.94,
     "batch_size": 512,
-    "tensorboard_log": "logs"
+    "tensorboard_log": "logs",
+    "verbose": 1
     }
-    model = PPO.load('trained_models/'+resume_model_name, env=env, device="cuda", custom_objects=custom_objects)
-        # input("Press ENTER to continue...")
+    model = TRPPO(
+            TransferActorCriticPolicy,
+            env,
+            device="cuda", 
+            verbose=1,
+            n_steps=512,
+            batch_size=512,
+            n_epochs=4,
+            gamma=0.94,
+            learning_rate=lr_schedule,
+            clip_range=clip_range_schedule,
+            tensorboard_log="logs",
+            policy_kwargs=policy_kwargs
+        )
+    model_previous = PPO.load('trained_models/ppo_ryu_john_honda_comes_lowres_11002432_steps.zip', env=env)
+    model_transferred = PPO.load('trained_models/transferred_model.zip', env=env)
+
+    model.policy.mlp_extractor.j_policy_net.load_state_dict(model_previous.policy.features_extractor.state_dict())
+    model.policy.action_net.load_state_dict(model_previous.policy.action_net.state_dict())
+    model.policy.mlp_extractor.j_value_net.load_state_dict(model_transferred.policy.features_extractor.state_dict())
+    model.policy.value_net.load_state_dict(model_transferred.policy.value_net.state_dict())
+
+    # input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"
     os.makedirs(save_dir, exist_ok=True)
@@ -111,7 +134,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 2 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_honda_comes_lowres"
+    ExperimentName = "value_transferring_policy_regression"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -123,7 +146,6 @@ def main():
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,
-        reset_num_timesteps=False
     )
     env.close()
 

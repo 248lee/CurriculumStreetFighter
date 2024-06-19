@@ -17,11 +17,14 @@ import retro
 from stable_baselines3 import PPO
 import matplotlib.pyplot as plt
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
+import torch as th
 
 RESET_ROUND = True  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"transferred_model2" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME1 = r"ppo_ryu_john_value_regression_6000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME2 = r"transferred_model"
+MODEL_NAME3 = r"ppo_ryu_john_honda_comes_lowres_11002432_steps"
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -29,8 +32,7 @@ MODEL_NAME = r"transferred_model2" # Specify the model file to load. Model "ppo_
 # ppo_ryu_3000000_steps_updated: Near the final overfitted state, almost dominate first round but barely generalizable.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
 
-RANDOM_ACTION = False
-NUM_EPISODES = 30 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
+NUM_EPISODES = 1 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
 MODEL_DIR = r"trained_models/"
 
 def make_env(game, state):
@@ -41,7 +43,7 @@ def make_env(game, state):
             use_restricted_actions=retro.Actions.FILTERED,
             obs_type=retro.Observations.IMAGE
         )
-        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name="Champion.Level12.RyuVsHonda_20.state")
+        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name="Champion.Level12.RyuVsBison_test.state")
         return env
     return _init
 
@@ -49,9 +51,13 @@ game = "StreetFighterIISpecialChampionEdition-Genesis"
 env = make_env(game, state="Champion.Level12.RyuVsHonda_7.state")()
 # model = PPO("CnnPolicy", env)
 
-if not RANDOM_ACTION:
-    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME), env=env)
+if MODEL_NAME1 != None:
+    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME1), env=env)
     print(model.policy)
+
+if MODEL_NAME2 != None:
+    model2 = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME2), env=env)
+    model3 = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME3), env=env)
 
 obs, _info = env.reset()
 done = False
@@ -61,6 +67,9 @@ episode_reward_sum = 0
 num_victory = 0
 
 print("\nFighting Begins!\n")
+values = []
+value2s = []
+value3s = []
 
 for _ in range(num_episodes):
     done = False
@@ -72,12 +81,22 @@ for _ in range(num_episodes):
 
     while not done:
         timestamp = time.time()
-
-        if RANDOM_ACTION:
+        value = None
+        value2 = None
+        if MODEL_NAME2 != None:
+            obs_tensor, _ = model2.policy.obs_to_tensor(obs)
+            value2 = th.squeeze(model2.policy.predict_values(obs_tensor), 0)
+            value3 = th.squeeze(model3.policy.predict_values(obs_tensor), 0)
+        if MODEL_NAME1 == None:
             obs, reward, done, trunc, info = env.step(env.action_space.sample())
         else:
             action, _states = model.predict(obs)
+            value = th.squeeze(model.policy.predict_values(obs_tensor), 0)
             obs, reward, done, trunc, info = env.step(action)
+
+        values.append(value.cpu().detach().numpy()[0])
+        value2s.append(value2.cpu().detach().numpy()[0])
+        value3s.append(value3.cpu().detach().numpy()[0])
         # for i in range(3):
         #     plt.imshow(obs[:, :, i], cmap='gray')
         #     plt.show()
@@ -103,7 +122,12 @@ for _ in range(num_episodes):
 
 env.close()
 print("Winning rate: {}".format(1.0 * num_victory / num_episodes))
-if RANDOM_ACTION:
-    print("Average reward for random action: {}".format(episode_reward_sum/num_episodes))
-else:
-    print("Average reward for {}: {}".format(MODEL_NAME, episode_reward_sum/num_episodes))
+# if RANDOM_ACTION:
+#     print("Average reward for random action: {}".format(episode_reward_sum/num_episodes))
+print("Average reward for {}: {}".format(MODEL_NAME1, episode_reward_sum/num_episodes))
+print("Average reward for {}: {}".format(MODEL_NAME2, episode_reward_sum/num_episodes))
+
+plt.plot(range(len(values)), values)
+plt.plot(range(len(value2s)), value2s)
+plt.plot(range(len(value3s)), value3s)
+plt.show()
