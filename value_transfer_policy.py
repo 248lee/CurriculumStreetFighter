@@ -7,7 +7,7 @@ from torch import nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.policies import ActorCriticCnnPolicy
 
-from network_structures import CustomFeatureExtractorCNN, Stage2CustomFeatureExtractorCNN
+from network_structures import CustomFeatureExtractorCNN, Stage2CustomFeatureExtractorCNN, Stage3CustomFeatureExtractorCNN
 
 
 class CustomNetwork(nn.Module):
@@ -28,9 +28,9 @@ class CustomNetwork(nn.Module):
 
 
         # Policy network
-        self.j_policy_net = CustomFeatureExtractorCNN(observation_space)
+        self.j_policy_net = Stage2CustomFeatureExtractorCNN(observation_space)
         # Value network
-        self.j_value_net = Stage2CustomFeatureExtractorCNN(observation_space)
+        self.j_value_net = Stage3CustomFeatureExtractorCNN(observation_space)
 
         # IMPORTANT:
         # Save output dimensions, used to create the distributions

@@ -107,7 +107,7 @@ def main():
             tensorboard_log="logs",
             policy_kwargs=policy_kwargs
         )
-    model_previous = PPO.load('trained_models/ppo_ryu_john_honda_comes_lowres_11002432_steps.zip', env=env)
+    model_previous = PPO.load('trained_models/ppo_ryu_john_super_low_res_s2_8000000_steps.zip', env=env)
     model_transferred = PPO.load('trained_models/transferred_model.zip', env=env)
 
     model.policy.mlp_extractor.j_policy_net.load_state_dict(model_previous.policy.features_extractor.state_dict())
@@ -142,7 +142,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(5000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

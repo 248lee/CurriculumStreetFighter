@@ -12,6 +12,8 @@ from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticP
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
+from transfer import current_stage, next_stage
+
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
 
@@ -188,15 +190,15 @@ class TRPPO(OnPolicyAlgorithm):
         self.policy.set_training_mode(True)
 
         # Freeze the layers except cnn_stage1 of j_value_net
-        if self.num_timesteps < 5000000:
+        if self.num_timesteps < 3000000:
             for name, param in self.policy.named_parameters():
                 if "j_policy_net" in name:
                     param.requires_grad = False
-                elif not (("cnn_stage1" in name) or ("bn" in name)):
+                elif not ((("cnn_stage" + str(current_stage)) in name) or (("bn" + str(next_stage)) in name)):
                     param.requires_grad = False
         else:
             for name, param in self.policy.named_parameters():
-                if "j_policy_net" in name:
+                if "j_policy_net" in name or "action_net" in name:
                     param.requires_grad = False
                 else:
                     param.requires_grad = True
