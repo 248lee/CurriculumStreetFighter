@@ -126,9 +126,11 @@ def main():
         features_extractor_class=Stage2CustomFeatureExtractorCNN,
         features_extractor_kwargs=dict(features_dim=512),
         )
-        model = PPO(
+        model = TRPPO(
             "CnnPolicy",
+            "ppo_ryu_john_super_low_res_again_12000000_steps.zip",
             env,
+            transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
             n_steps=512,

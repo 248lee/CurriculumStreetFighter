@@ -15,6 +15,7 @@ from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 from stable_baselines3 import PPO
 import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
+old_model = None
 
 
 class TRPPO(OnPolicyAlgorithm):
@@ -172,7 +173,8 @@ class TRPPO(OnPolicyAlgorithm):
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
 
-        self.old_model = PPO.load(os.path.join("trained_models/", old_model_name), env=env)
+        global old_model
+        old_model = PPO.load(os.path.join("trained_models/", old_model_name), env=env)
 
         if _init_setup_model:
             self._setup_model()
@@ -193,6 +195,7 @@ class TRPPO(OnPolicyAlgorithm):
         """
         Update policy using the currently gathered rollout buffer.
         """
+        global old_model
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -268,7 +271,7 @@ class TRPPO(OnPolicyAlgorithm):
 
                 # Old value regularization term
                 with th.no_grad():
-                    old_values = self.old_model.policy.predict_values(rollout_data.observations)
+                    old_values = old_model.policy.predict_values(rollout_data.observations)
                 values_pred_2dim = th.unsqueeze(values_pred, dim=-1)
                 transfer_regularization = F.mse_loss(old_values, values_pred_2dim)
 
