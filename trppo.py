@@ -271,11 +271,10 @@ class TRPPO(OnPolicyAlgorithm):
 
                 # Old value regularization term
                 with th.no_grad():
-                    old_values = old_model.policy.predict_values(rollout_data.observations)
-                values_pred_2dim = th.unsqueeze(values_pred, dim=-1)
-                transfer_regularization = F.mse_loss(old_values, values_pred_2dim)
+                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations)
+                transfer_regularization = F.mse_loss(th.exp(log_prob), th.exp(last_stage_log_prob))
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * ((1 - lambd) * value_loss + lambd * transfer_regularization)
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss +  + lambd * transfer_regularization
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
