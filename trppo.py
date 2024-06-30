@@ -83,8 +83,8 @@ class TRPPO(OnPolicyAlgorithm):
     def __init__(
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
-        old_model_name: str,
         env: Union[GymEnv, str],
+        old_model_name: str = None,
         transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
@@ -172,9 +172,7 @@ class TRPPO(OnPolicyAlgorithm):
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
-
-        global old_model
-        old_model = PPO.load(os.path.join("trained_models/", old_model_name), env=env)
+        self.old_model_name = old_model_name
 
         if _init_setup_model:
             self._setup_model()
@@ -190,12 +188,15 @@ class TRPPO(OnPolicyAlgorithm):
                 assert self.clip_range_vf > 0, "`clip_range_vf` must be positive, " "pass `None` to deactivate vf clipping"
 
             self.clip_range_vf = get_schedule_fn(self.clip_range_vf)
+        
 
     def train(self) -> None:
         """
         Update policy using the currently gathered rollout buffer.
         """
         global old_model
+        if old_model == None:
+            old_model = PPO.load(os.path.join("trained_models/", self.old_model_name), env=self.env)
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -210,6 +211,7 @@ class TRPPO(OnPolicyAlgorithm):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        transfer_regular_losses = []
 
         continue_training = True
         # train for n_epochs epochs
@@ -271,11 +273,11 @@ class TRPPO(OnPolicyAlgorithm):
 
                 # Old value regularization term
                 with th.no_grad():
-                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations)
+                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
                 transfer_regularization = F.mse_loss(th.exp(log_prob), th.exp(last_stage_log_prob))
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss +  + lambd * transfer_regularization
-
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + lambd * transfer_regularization
+                transfer_regular_losses.append(lambd * transfer_regularization.item())
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -312,6 +314,7 @@ class TRPPO(OnPolicyAlgorithm):
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)
+        self.logger.record("train/transfer_regularization_losses", np.mean(transfer_regular_losses))
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
 

@@ -94,7 +94,7 @@ def main():
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
         clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule(1, 0, 0)
+        transfer_lambd = transfer_lambd_schedule(100, 0, 0)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -128,8 +128,8 @@ def main():
         )
         model = TRPPO(
             "CnnPolicy",
-            "ppo_ryu_john_super_low_res_again_12000000_steps.zip",
             env,
+            old_model_name="ppo_ryu_john_super_low_res_again_12000000_steps.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
