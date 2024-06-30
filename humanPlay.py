@@ -17,11 +17,47 @@ import retro
 from stable_baselines3 import PPO
 import matplotlib.pyplot as plt
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
+import matplotlib.pyplot as plt
+from pynput import keyboard
+import numpy as np
+
+pressed = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=float)
+inputs = ['u', 'i', 'v', 'b', 'w', 's', 'a', 'd', 'o', 'j', 'k', 'l']
+buttons = ['B', 'A', 'MODE', 'START', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'C', 'Y', 'X', 'Z'] # C for jump, B for fire
+
+
+def on_press(key):
+    try:
+        global pressed
+        for i in range(len(inputs)):
+            if inputs[i] == key.char:
+                pressed[i] = float(1)
+        # if sum(pressed) == 0:
+        #     pressed[0] = float(1)
+
+    except AttributeError:
+        print('special key {0} pressed'.format(
+            key))
+
+def on_release(key):
+    # print('{0} released'.format(
+    #     key))
+    global pressed
+    pressed = np.zeros_like(pressed)  # zerolize pressed
+    if key == keyboard.Key.esc:
+        # Stop listener
+        return False
+
+
+listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+listener.start()
 
 RESET_ROUND = True  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"ppo_ryu_john_super_low_res_again_12000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"ppo_ryu_john_super_low_res_s2_8000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -40,8 +76,9 @@ def make_env(game, state):
             state=state, 
             use_restricted_actions=retro.Actions.FILTERED,
             obs_type=retro.Observations.IMAGE,
+            players=2
         )
-        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name="Champion.Level12.RyuVsBison_test.state")
+        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name="LetsBattle.state")
         return env
     return _init
 
@@ -50,7 +87,7 @@ env = make_env(game, state="Champion.Level12.RyuVsHonda_7.state")()
 # model = PPO("CnnPolicy", env)
 
 if not RANDOM_ACTION:
-    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME), env=env)
+    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME))
     print(model.policy)
 
 obs, _info = env.reset()
@@ -77,6 +114,9 @@ for _ in range(num_episodes):
             obs, reward, done, trunc, info = env.step(env.action_space.sample())
         else:
             action, _states = model.predict(obs)
+            # print(action)
+            # print(pressed)
+            action = np.concatenate((action, pressed))
             obs, reward, done, trunc, info = env.step(action)
         # for i in range(3):
         #     plt.imshow(obs[:, :, i], cmap='gray')

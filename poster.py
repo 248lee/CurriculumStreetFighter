@@ -17,11 +17,13 @@ import retro
 from stable_baselines3 import PPO
 import matplotlib.pyplot as plt
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
+import torch.nn as nn
+import torch as th
 
 RESET_ROUND = True  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"ppo_ryu_john_super_low_res_again_12000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"ppo_ryu_john_super_low_res_s2_8000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -39,7 +41,7 @@ def make_env(game, state):
             game=game, 
             state=state, 
             use_restricted_actions=retro.Actions.FILTERED,
-            obs_type=retro.Observations.IMAGE,
+            obs_type=retro.Observations.IMAGE
         )
         env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name="Champion.Level12.RyuVsBison_test.state")
         return env
@@ -78,6 +80,13 @@ for _ in range(num_episodes):
         else:
             action, _states = model.predict(obs)
             obs, reward, done, trunc, info = env.step(action)
+            obs_tensor, _ = model.policy.obs_to_tensor(obs.astype(float))
+            compressed_obs = nn.AvgPool2d(4, stride=4)(obs_tensor).cpu().numpy() / 255
+            compressed_obs2 = nn.AvgPool2d(8, stride=8)(obs_tensor).cpu().numpy() / 255
+            plt.imshow(compressed_obs[0].transpose((1, 2, 0)))
+            plt.show()
+            plt.imshow(compressed_obs2[0].transpose((1, 2, 0)))
+            plt.show()
         # for i in range(3):
         #     plt.imshow(obs[:, :, i], cmap='gray')
         #     plt.show()

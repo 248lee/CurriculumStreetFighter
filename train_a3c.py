@@ -14,8 +14,7 @@ import os
 import sys
 
 import retro
-from stable_baselines3 import PPO
-from trppo import TRPPO
+from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecTransposeImage, DummyVecEnv
@@ -30,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=2
+STAGE=1
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -43,20 +42,6 @@ def linear_schedule(initial_value, final_value=0.0):
     def scheduler(progress):
         return final_value + progress * (initial_value - final_value)
 
-    return scheduler
-
-def transfer_lambd_schedule(initial_value, mid_value, final_value=0.0):
-    if isinstance(initial_value, str):
-        initial_value = float(initial_value)
-        mid_value = float(mid_value)
-        final_value = float(final_value)
-        assert (initial_value > 0.0)
-
-    def scheduler(progress):
-        if progress >= 0.5:
-            return mid_value + ((progress - 0.5) * 2) * (initial_value - mid_value)
-        return final_value
-    
     return scheduler
 
 def make_env(game, state, seed=0):
@@ -84,7 +69,7 @@ def main():
     if STAGE == 1:
         lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
-        lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
+        lr_schedule = linear_schedule(5e-5, 2.5e-10)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -93,53 +78,41 @@ def main():
     if STAGE == 1:
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
-        clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule(1, 0, 0)
+        clip_range_schedule = linear_schedule(0.04, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
-    if STAGE==1:
-        policy_kwargs = dict(
+    policy_kwargs = dict(
         activation_fn=th.nn.ReLU,
         net_arch=dict(pi=[], vf=[]),
         features_extractor_class=CustomFeatureExtractorCNN,
         features_extractor_kwargs=dict(features_dim=512),
-        )
-        model = PPO(
+    )
+
+    if STAGE==1:
+        model = A2C(
             "CnnPolicy", 
             env,
             device="cuda", 
             verbose=1,
-            n_steps=512,
-            batch_size=512,
-            n_epochs=4,
+            n_steps=32,
             gamma=0.94,
             learning_rate=lr_schedule,
-            clip_range=clip_range_schedule,
             tensorboard_log="logs",
             policy_kwargs=policy_kwargs
         )
     elif STAGE==2:
-        policy_kwargs = dict(
-        activation_fn=th.nn.ReLU,
-        net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=Stage2CustomFeatureExtractorCNN,
-        features_extractor_kwargs=dict(features_dim=512),
-        )
-        model = PPO(
-            "CnnPolicy",
-            env,
-            device="cuda", 
-            verbose=1,
-            n_steps=512,
-            batch_size=512,
-            n_epochs=4,
-            gamma=0.94,
-            learning_rate=lr_schedule,
-            clip_range=clip_range_schedule,
-            tensorboard_log="logs",
-            policy_kwargs=policy_kwargs
-        )
+        custom_objects = {
+        "learning_rate": lr_schedule,
+        "clip_range": clip_range_schedule,
+        "n_steps": 512,
+        "n_epochs": 4,
+        "gamma": 0.94,
+        "batch_size": 512,
+        "tensorboard_log": "logs",
+        "verbose": 1
+        }
+        model = PPO.load('trained_models/transferred_model2.zip', env=env, device="cuda", custom_objects=custom_objects)
         # input("Press ENTER to continue...")
     # Set the save directory
     save_dir = "trained_models"
@@ -163,8 +136,8 @@ def main():
     for name, param in model.policy.named_parameters():
         param.requires_grad = True
 
-    checkpoint_interval = 31250 * 8 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_super_low_res_again_s2"
+    checkpoint_interval = 31250 * 6 # checkpoint_interval * num_envs = total_steps_per_checkpoint
+    ExperimentName = "a2c_ryu_john"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

@@ -21,7 +21,7 @@ if __name__ == '__main__':
                 render_mode='rgb_array'  
             )
     env = TransferStreetFighterCustomWrapper(env)
-    model = PPO.load('trained_models/ppo_ryu_john_super_low_res_s2_8000000_steps.zip', env=env)
+    model = PPO.load('trained_models/ppo_ryu_john_super_low_res_10000000_steps.zip', env=env)
     policy = model.policy
     movie_obs = []
     movie_probs = []

@@ -21,7 +21,7 @@ class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         n_input_channels = observation_space.shape[0]
         self.avg = nn.AvgPool2d(8, stride=8)
         self.cnn_stage1 = nn.Sequential(
-            nn.Conv2d(n_input_channels, conv_stage1_kernels, kernel_size=8, stride=1, padding='same'),
+            nn.Conv2d(n_input_channels, conv_stage1_kernels, kernel_size=3, stride=1, padding='same'),
             nn.ReLU(),
             nn.MaxPool2d(2, stride=2),
         )
