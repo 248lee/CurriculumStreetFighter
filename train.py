@@ -31,7 +31,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=2
+STAGE=1
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -167,7 +167,7 @@ def main():
         param.requires_grad = True
 
     checkpoint_interval = 31250 * 8 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_policy_curri_s2"
+    ExperimentName = "ppo_ryu_john_jump_punish"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
