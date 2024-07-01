@@ -20,6 +20,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecTransposeImage, DummyVecEnv
 import torch as th
+import numpy as np
 
 import gymnasium as gym
 
@@ -45,16 +46,16 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def transfer_lambd_schedule(initial_value, mid_value, final_value=0.0):
+def transfer_lambd_schedule(initial_value, mid_exp, final_value=0.0):
     if isinstance(initial_value, str):
         initial_value = float(initial_value)
-        mid_value = float(mid_value)
         final_value = float(final_value)
         assert (initial_value > 0.0)
 
     def scheduler(progress):
         if progress >= 0.5:
-            return mid_value + ((progress - 0.5) * 2) * (initial_value - mid_value)
+            progress0_1 = (1 - progress) * 2 # change [1.0 -> 0.5] to [0.0 -> 1.0]
+            return initial_value * (2**(mid_exp * progress0_1))
         return final_value
     
     return scheduler
@@ -94,7 +95,7 @@ def main():
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
         clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule(100, 0, 0)
+        transfer_lambd = transfer_lambd_schedule(1, -15, 0)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
