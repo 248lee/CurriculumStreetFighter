@@ -99,7 +99,7 @@ def main():
     if STAGE == 1:
         lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
-        lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
+        lr_schedule = linear_schedule(5e-5, 4.5e-7)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -109,7 +109,7 @@ def main():
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
         clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule_linear(100, 0, 0)
+        transfer_lambd = transfer_lambd_schedule_exp(1000, -15, 0)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -180,8 +180,8 @@ def main():
     for name, param in model.policy.named_parameters():
         param.requires_grad = True
 
-    checkpoint_interval = 31250 * 8 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_jump_punish_s2"
+    checkpoint_interval = 31250 * 32 # checkpoint_interval * num_envs = total_steps_per_checkpoint
+    ExperimentName = "ppo_ryu_john_delta_check"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

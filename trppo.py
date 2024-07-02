@@ -212,6 +212,7 @@ class TRPPO(OnPolicyAlgorithm):
         pg_losses, value_losses = [], []
         clip_fractions = []
         transfer_regular_losses = []
+        delta_values = []
 
         continue_training = True
         # train for n_epochs epochs
@@ -278,6 +279,7 @@ class TRPPO(OnPolicyAlgorithm):
 
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + lambd * transfer_regularization
                 transfer_regular_losses.append(lambd * transfer_regularization.item())
+                delta_values.append(th.mean(values - last_stage_values).item())
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -314,8 +316,9 @@ class TRPPO(OnPolicyAlgorithm):
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)
-        self.logger.record("train/transfer_regularization_losses", np.mean(transfer_regular_losses))
-        self.logger.record("train/lambd", lambd)
+        self.logger.record("johnlee_transfer/transfer_regularization_losses", np.mean(transfer_regular_losses))
+        self.logger.record("johnlee_transfer/lambd", lambd)
+        self.logger.record("johnlee_transfer/delta_values", np.mean(delta_values))
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
 
