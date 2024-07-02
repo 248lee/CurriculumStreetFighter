@@ -31,7 +31,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -46,7 +46,7 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def transfer_lambd_schedule(initial_value, mid_exp, final_value=0.0):
+def transfer_lambd_schedule_exp(initial_value, mid_exp, final_value=0.0):
     if isinstance(initial_value, str):
         initial_value = float(initial_value)
         final_value = float(final_value)
@@ -56,6 +56,20 @@ def transfer_lambd_schedule(initial_value, mid_exp, final_value=0.0):
         if progress >= 0.5:
             progress0_1 = (1 - progress) * 2 # change [1.0 -> 0.5] to [0.0 -> 1.0]
             return initial_value * (2**(mid_exp * progress0_1))
+        return final_value
+    
+    return scheduler
+
+def transfer_lambd_schedule_linear(initial_value, mid_value, final_value=0.0):
+    if isinstance(initial_value, str):
+        initial_value = float(initial_value)
+        mid_value = float(mid_value)
+        final_value = float(final_value)
+        assert (initial_value > 0.0)
+
+    def scheduler(progress):
+        if progress >= 0.5:
+            return mid_value + ((progress - 0.5) * 2) * (initial_value - mid_value)
         return final_value
     
     return scheduler
@@ -95,7 +109,7 @@ def main():
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
         clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule(1, -15, 0)
+        transfer_lambd = transfer_lambd_schedule_linear(100, 0, 0)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -130,7 +144,7 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="ppo_ryu_john_super_low_res_again_12000000_steps.zip",
+            old_model_name="ppo_ryu_john_jump_punish_8000000_steps.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
@@ -167,7 +181,7 @@ def main():
         param.requires_grad = True
 
     checkpoint_interval = 31250 * 8 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_jump_punish"
+    ExperimentName = "ppo_ryu_john_jump_punish_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
