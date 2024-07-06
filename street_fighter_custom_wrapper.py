@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 # Custom environment wrapper
 class StreetFighterCustomWrapper(gym.Wrapper):
-    def __init__(self, env, reset_round=True, rendering=False, load_state_name=""):
+    def __init__(self, env, reset_round=True, rendering=False, load_state_name="", enemy=0):
         super(StreetFighterCustomWrapper, self).__init__(env)
         self.env = env
 
@@ -48,6 +48,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         self.rendering = rendering
 
         self.load_state_name = load_state_name
+        self.enemy = enemy
 
     def seed(self, arg1):
         pass
@@ -63,12 +64,11 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         observation, info = self.env.reset()
         random.seed(seed)
         if self.load_state_name == "":
-            s = random.randint(1, 32)
-            enemy = 0
-            if enemy == 0:
-                self.env.load_state('Champion.Level12.RyuVsBison_' + str(s) + '.state')
+            s = random.randint(1, 16)
+            if self.enemy == 0:
+                self.env.load_state('Champion.Level12.ChunVSRyu_D5_' + str(s) + '.state')
             else:
-                self.env.load_state('Champion.Level12.RyuVsHonda_' + str(s) + '.state')
+                self.env.load_state('Champion.Level12.ChunVSRyu_D7_' + str(s) + '.state')
         else:
             self.env.load_state(self.load_state_name)
 
@@ -144,7 +144,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         # If the fighting is still going on
         else:
             custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * 1.68
-            if custom_reward == 0 and info['agent_y'] >= 150:
+            if custom_reward == 0:  # and info['agent_y'] >= 150:
                 custom_reward = 2
             self.prev_player_health = curr_player_health
             self.prev_oppont_health = curr_oppont_health

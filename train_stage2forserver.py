@@ -31,7 +31,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-STAGE=1
+STAGE=2
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -82,7 +82,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env)
+        env = StreetFighterCustomWrapper(env, enemy=1)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -97,7 +97,7 @@ def main():
 
     # Set linear schedule for learning rate
     if STAGE == 1:
-        lr_schedule = linear_schedule(2.5e-4, 1.87e-4)
+        lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
         lr_schedule = linear_schedule(1e-4, 4.5e-7)
 
@@ -138,13 +138,13 @@ def main():
         policy_kwargs = dict(
         activation_fn=th.nn.ReLU,
         net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=Stage2CustomFeatureExtractorCNN,
+        features_extractor_class=CustomFeatureExtractorCNN,
         features_extractor_kwargs=dict(features_dim=512),
         )
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="ppo_ryu_john_jump_punish_8000000_steps.zip",
+            old_model_name="ppo_chun_vs_ryu_john_final.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
@@ -189,7 +189,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(6000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(20000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

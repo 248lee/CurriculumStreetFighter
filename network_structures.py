@@ -19,19 +19,19 @@ class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
         n_input_channels = observation_space.shape[0]
-        self.avg = nn.AvgPool2d(8, stride=8)
+        self.avg = nn.AvgPool2d(2, stride=2)
         self.cnn_stage1 = nn.Sequential(
-            nn.Conv2d(n_input_channels, conv_stage1_kernels, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(n_input_channels, conv_stage1_kernels, kernel_size=7, stride=1, padding='same'),
             nn.ReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         self.cnn = nn.Sequential(
-            # nn.Conv2d(conv_stage1_kernels, 64, kernel_size=4, stride=1, padding='same'),
-            # nn.ReLU(),
-            # nn.MaxPool2d(2, stride=2),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding='same'),
-            # nn.ReLU(),
-            # nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(conv_stage1_kernels, 64, kernel_size=5, stride=1, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2, stride=2),
             nn.Flatten(),
         )
         # Compute shape by doing one forward pass
