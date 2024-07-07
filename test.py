@@ -21,7 +21,7 @@ from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 RESET_ROUND = True  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"ppo_ryu_john_policy_curri_s2_16000000_steps" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"ppo_chun_vs_ryu_john_s2_final" # Specify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
@@ -29,7 +29,7 @@ MODEL_NAME = r"ppo_ryu_john_policy_curri_s2_16000000_steps" # Specify the model 
 # ppo_ryu_3000000_steps_updated: Near the final overfitted state, almost dominate first round but barely generalizable.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
 
-RANDOM_ACTION = True
+RANDOM_ACTION = False
 NUM_EPISODES = 30 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
 MODEL_DIR = r"trained_models/"
 
@@ -41,7 +41,7 @@ def make_env(game, state):
             use_restricted_actions=retro.Actions.FILTERED,
             obs_type=retro.Observations.IMAGE,
         )
-        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, enemy=1)
+        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name='Champion.Level12.ChunVSRyu_D7_11.state')
         return env
     return _init
 

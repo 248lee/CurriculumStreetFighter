@@ -143,7 +143,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             custom_done = False
         # If the fighting is still going on
         else:
-            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * 1.68
+            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * 2.5269
             if custom_reward == 0:  # and info['agent_y'] >= 150:
                 custom_reward = 2
             self.prev_player_health = curr_player_health
