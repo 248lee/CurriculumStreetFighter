@@ -18,11 +18,13 @@ if __name__ == '__main__':
                 game="StreetFighterIISpecialChampionEdition-Genesis", 
                 state="Champion.Level12.RyuVsBison", 
                 use_restricted_actions=retro.Actions.FILTERED, 
-                render_mode='rgb_array'  
+                render_mode='rgb_array'
             )
     env = TransferStreetFighterCustomWrapper(env)
-    model = PPO.load('trained_models/ppo_ryu_john_super_low_res_10000000_steps.zip', env=env)
+    model = PPO.load('trained_models/ppo_chun_vs_ryu_john_final.zip', env=env)
+    model2 = PPO.load('trained_models/value_transfer_final.zip', env=env)
     policy = model.policy
+    policy2 = model2.policy
     movie_obs = []
     movie_probs = []
     movie_values = []
@@ -44,10 +46,18 @@ if __name__ == '__main__':
                     action, _states = model.predict(obs)
                     obs_tensor, _ = policy.obs_to_tensor(obs)
                     prob = policy.get_distribution(obs_tensor).distribution.probs
+                    prob2 = policy2.get_distribution(obs_tensor).distribution.probs
                     prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
                     value = th.squeeze(policy.predict_values(obs_tensor), 0)
+                    value2 = th.squeeze(policy2.predict_values(obs_tensor), 0)
                     movie_probs.append(prob)
                     movie_values.append(value)
+
+                    print(prob)
+                    print(prob2)
+                    print(value)
+                    print(value2)
+                    input("=============================================")
                 # print(movie_probs[-1].shape)
                 # input("hello there")
                 obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension

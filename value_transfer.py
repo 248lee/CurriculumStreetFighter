@@ -14,7 +14,7 @@ import os
 import sys
 
 import retro
-from trppo import TRPPO
+from vppo import VPPO
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -52,7 +52,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env)
+        env = StreetFighterCustomWrapper(env, enemy=1)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -66,7 +66,7 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    lr_schedule = linear_schedule(5e-4, 2.5e-10)
+    lr_schedule = linear_schedule(1e-4, 5e-5)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -76,11 +76,6 @@ def main():
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
-    policy_kwargs = dict(
-        activation_fn=th.nn.ReLU,
-        net_arch=dict(pi=[], vf=[]),
-        features_extractor_class=WhiteFeatureExtractorCNN
-    )
 
     
     custom_objects = {
@@ -93,27 +88,7 @@ def main():
     "tensorboard_log": "logs",
     "verbose": 1
     }
-    model = TRPPO(
-            TransferActorCriticPolicy,
-            env,
-            device="cuda", 
-            verbose=1,
-            n_steps=512,
-            batch_size=512,
-            n_epochs=4,
-            gamma=0.94,
-            learning_rate=lr_schedule,
-            clip_range=clip_range_schedule,
-            tensorboard_log="logs",
-            policy_kwargs=policy_kwargs
-        )
-    model_previous = PPO.load('trained_models/ppo_ryu_john_super_low_res_s2_8000000_steps.zip', env=env)
-    model_transferred = PPO.load('trained_models/transferred_model.zip', env=env)
-
-    model.policy.mlp_extractor.j_policy_net.load_state_dict(model_previous.policy.features_extractor.state_dict())
-    model.policy.action_net.load_state_dict(model_previous.policy.action_net.state_dict())
-    model.policy.mlp_extractor.j_value_net.load_state_dict(model_transferred.policy.features_extractor.state_dict())
-    model.policy.value_net.load_state_dict(model_transferred.policy.value_net.state_dict())
+    model = VPPO.load('trained_models/ppo_chun_vs_ryu_john_final.zip', device="cuda", custom_objects=custom_objects, env=env)
 
     # input("Press ENTER to continue...")
     # Set the save directory
@@ -134,7 +109,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 2 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "value_transferring_policy_regression"
+    ExperimentName = "value_transfer"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -142,7 +117,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(5000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(500000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

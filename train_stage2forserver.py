@@ -144,7 +144,7 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="ppo_chun_vs_ryu_john_final.zip",
+            old_model_name="value_transfer_final.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
