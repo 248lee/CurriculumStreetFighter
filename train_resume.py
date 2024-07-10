@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-resume_model_name = 'ppo_ryu_john_honda_comes_lowres_final.zip'
+resume_model_name = 'ppo_chun_vs_ryu_john_final.zip'
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -52,7 +52,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env)
+        env = StreetFighterCustomWrapper(env, enemy=1)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -66,11 +66,11 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    lr_schedule = 8e-5
+    lr_schedule = linear_schedule(1e-4, 4.5e-7)
 
 
     # Set linear scheduler for clip range
-    clip_range_schedule = 0.022
+    clip_range_schedule = linear_schedule(0.15, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -110,8 +110,8 @@ def main():
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
-    checkpoint_interval = 31250 * 2 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_john_honda_comes_lowres"
+    checkpoint_interval = 31250 * 12 # checkpoint_interval * num_envs = total_steps_per_checkpoint
+    ExperimentName = "ppo_chun_please_very_low_even_lowest"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -119,11 +119,10 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(20000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,
-        reset_num_timesteps=False
     )
     env.close()
 

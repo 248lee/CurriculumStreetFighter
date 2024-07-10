@@ -109,7 +109,7 @@ def main():
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
         clip_range_schedule = linear_schedule(0.15, 0.02)
-        transfer_lambd = transfer_lambd_schedule_exp(100, -15, 0)
+        transfer_lambd = transfer_lambd_schedule_exp(50, -15, 0)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -181,7 +181,7 @@ def main():
         param.requires_grad = True
 
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_chun_vs_ryu_john"
+    ExperimentName = "ppo_chun_vs_ryu_john_punishment_s2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
