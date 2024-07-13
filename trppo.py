@@ -211,7 +211,7 @@ class TRPPO(OnPolicyAlgorithm):
         pg_losses, value_losses = [], []
         clip_fractions = []
         transfer_regular_losses = []
-        delta_values = []
+        delta_values, lambds = [], []
 
         continue_training = True
         # train for n_epochs epochs
@@ -276,14 +276,14 @@ class TRPPO(OnPolicyAlgorithm):
                 with th.no_grad():
                     last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
                     last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
-                transfer_regularization = F.mse_loss(prob, last_stage_prob)
+                    delta_value = values - last_stage_values
+                    lambd = th.mean(delta_value)
+                    lambd = th.clip(lambd, min=-0.05, max=0) * (-1e3)
+                transfer_regularization = lambd * F.mse_loss(prob, last_stage_prob)
+                lambds.append(lambd.item())
 
-                delta_value = values - last_stage_values
-                lambd = 30 ** (-200 * delta_value)
-                print(lambd)
-                input()
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + delta_value * transfer_regularization
-                transfer_regular_losses.append(delta_value * transfer_regularization.item())
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + transfer_regularization
+                transfer_regular_losses.append(transfer_regularization.item())
                 delta_values.append(th.mean(delta_value).item())
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -322,7 +322,7 @@ class TRPPO(OnPolicyAlgorithm):
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)
         self.logger.record("johnlee_transfer/transfer_regularization_losses", np.mean(transfer_regular_losses))
-        self.logger.record("johnlee_transfer/lambd", th.mean(lambd).item())
+        self.logger.record("johnlee_transfer/lambd", np.mean(lambds))
         self.logger.record("johnlee_transfer/delta_values", np.mean(delta_values))
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
