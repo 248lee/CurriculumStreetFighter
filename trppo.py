@@ -277,10 +277,10 @@ class TRPPO(OnPolicyAlgorithm):
                     last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
                     last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
                     delta_value = values - last_stage_values
-                    lambd = th.mean(delta_value)
-                    lambd = th.clip(lambd, min=-0.05, max=0) * (-1e3)
-                transfer_regularization = lambd * F.mse_loss(prob, last_stage_prob)
-                lambds.append(lambd.item())
+                    lambd = th.clip(delta_value, min=-0.05, max=0) * (-1e3)
+                    lambd_root = lambd ** 0.5
+                transfer_regularization = F.mse_loss(lambd_root * prob, lambd_root * last_stage_prob)
+                lambds.append(th.mean(lambd).item())
 
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + transfer_regularization
                 transfer_regular_losses.append(transfer_regularization.item())
