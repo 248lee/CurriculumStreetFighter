@@ -15,7 +15,8 @@ from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 from stable_baselines3 import PPO
 import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
-old_model = None
+old_model_value = None
+old_model_policy = None
 
 
 class TRPPO(OnPolicyAlgorithm):
@@ -84,7 +85,8 @@ class TRPPO(OnPolicyAlgorithm):
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
         env: Union[GymEnv, str],
-        old_model_name: str = None,
+        old_model_name_value: str = None,
+        old_model_name_policy: str = None,
         transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
@@ -172,7 +174,8 @@ class TRPPO(OnPolicyAlgorithm):
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
-        self.old_model_name = old_model_name
+        self.old_model_name_value = old_model_name_value
+        self.old_model_name_policy = old_model_name_policy
 
         if _init_setup_model:
             self._setup_model()
@@ -194,9 +197,12 @@ class TRPPO(OnPolicyAlgorithm):
         """
         Update policy using the currently gathered rollout buffer.
         """
-        global old_model
-        if old_model == None:
-            old_model = PPO.load(os.path.join("trained_models/", self.old_model_name), env=self.env)
+        global old_model_value
+        global old_model_policy
+        if old_model_value == None:
+            old_model_value = PPO.load(os.path.join("trained_models/", self.old_model_name_value), env=self.env)
+        if old_model_policy == None:
+            old_model_policy = PPO.load(os.path.join("trained_models/", self.old_model_name_policy), env=self.env)
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -274,8 +280,8 @@ class TRPPO(OnPolicyAlgorithm):
                 # Old value regularization term
                 prob = self.policy.get_distribution(rollout_data.observations).distribution.probs
                 with th.no_grad():
-                    last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
-                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
+                    last_stage_prob = old_model_policy.policy.get_distribution(rollout_data.observations).distribution.probs
+                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model_value.policy.evaluate_actions(rollout_data.observations, actions)
                     delta_value = values.unsqueeze(dim=-1) - last_stage_values
                     lambd = th.mean(delta_value)
                     lambd = th.clip(lambd, min=-0.05, max=0) * (-1e3)
