@@ -97,7 +97,7 @@ def main():
 
     # Set linear schedule for learning rate
     if STAGE == 1:
-        lr_schedule = linear_schedule(2.5e-4, 1.87e-4)
+        lr_schedule = linear_schedule(2.5e-4, 4.5e-5)
     elif STAGE == 2:
         lr_schedule = linear_schedule(1e-4, 4.5e-7)
 
@@ -181,7 +181,7 @@ def main():
         param.requires_grad = True
 
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_chun_vs_ryu_john"
+    ExperimentName = "ppo_chun_vs_ryu_john_s1_exp2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -189,7 +189,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(6000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(10000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,
