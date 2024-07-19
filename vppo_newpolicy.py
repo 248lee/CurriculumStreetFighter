@@ -12,16 +12,10 @@ from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticP
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
-from stable_baselines3 import PPO
-from vppo_newpolicy import VPPON
-import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
-new_model_old_env = None
-old_model_policy = None
-old_model_value = None
 
 
-class TRPPO(OnPolicyAlgorithm):
+class VPPON(OnPolicyAlgorithm):
     """
     Proximal Policy Optimization algorithm (PPO) (clip version)
 
@@ -87,10 +81,6 @@ class TRPPO(OnPolicyAlgorithm):
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
         env: Union[GymEnv, str],
-        old_env: Union[GymEnv, str],
-        old_model_policy_name: str = None,
-        old_model_value_name: str = None,
-        transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
         batch_size: int = 64,
@@ -173,13 +163,9 @@ class TRPPO(OnPolicyAlgorithm):
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.clip_range = clip_range
-        self.transfer_lambd = transfer_lambd
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
-        self.old_env = old_env
-        self.old_model_policy_name = old_model_policy_name
-        self.old_model_value_name = old_model_value_name
 
         if _init_setup_model:
             self._setup_model()
@@ -189,58 +175,16 @@ class TRPPO(OnPolicyAlgorithm):
 
         # Initialize schedules for policy/value clipping
         self.clip_range = get_schedule_fn(self.clip_range)
-        self.transfer_lambd = get_schedule_fn(self.transfer_lambd)
         if self.clip_range_vf is not None:
             if isinstance(self.clip_range_vf, (float, int)):
                 assert self.clip_range_vf > 0, "`clip_range_vf` must be positive, " "pass `None` to deactivate vf clipping"
 
             self.clip_range_vf = get_schedule_fn(self.clip_range_vf)
-        
 
     def train(self) -> None:
         """
         Update policy using the currently gathered rollout buffer.
         """
-        global new_model_old_env
-        global old_model_policy
-        global old_model_value
-
-        # Initialize new_model_old_env at the first train()
-        if new_model_old_env == None:
-            from network_structures import ConstantFeatureExtractorCNN
-            policy_kwargs = dict(
-            activation_fn=th.nn.ReLU,
-            net_arch=dict(pi=[], vf=[]),
-            features_extractor_class=ConstantFeatureExtractorCNN,
-            features_extractor_kwargs=dict(features_dim=512),
-            )
-            new_model_old_env = VPPON(
-                "CnnPolicy",
-                self.old_env,
-                device="cuda", 
-                verbose=1,
-                n_steps=512,
-                batch_size=512,
-                n_epochs=4,
-                gamma=0.94,
-                learning_rate=1e-05,
-                tensorboard_log="logs",
-                policy_kwargs=policy_kwargs
-            )
-        # Initialize old_model_policy
-        if old_model_policy == None:
-            old_model_policy = PPO.load(os.path.join("trained_models/", self.old_model_policy_name), env=self.env)
-        # Initialize old_model_value
-        if old_model_value == None:
-            old_model_value = PPO.load(os.path.join("trained_models/", self.old_model_value_name), env=self.env)
-        
-        # Set up the feature extractor and the policy network of the new_model_old_env
-        new_model_old_env.policy.features_extractor.constant_feature_extractor.load_state_dict(self.policy.features_extractor.state_dict())
-        new_model_old_env.policy.action_net.load_state_dict(self.policy.action_net.state_dict())
-
-        # Update the value function of the new policy in the old environment
-        new_model_old_env.learn(5120, reset_num_timesteps=False)
-
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -251,11 +195,16 @@ class TRPPO(OnPolicyAlgorithm):
         if self.clip_range_vf is not None:
             clip_range_vf = self.clip_range_vf(self._current_progress_remaining)  # type: ignore[operator]
 
+        # Freeze the parameters relating to the policy
+        for name, param in self.policy.named_parameters():
+            if not ('value_net' in name):
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
+
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
-        transfer_regular_losses = []
-        delta_values, lambds = [], []
 
         continue_training = True
         # train for n_epochs epochs
@@ -280,18 +229,18 @@ class TRPPO(OnPolicyAlgorithm):
                 if self.normalize_advantage and len(advantages) > 1:
                     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-                # ratio between old and new policy, should be one at the first iteration
-                ratio = th.exp(log_prob - rollout_data.old_log_prob)
+                # # ratio between old and new policy, should be one at the first iteration
+                # ratio = th.exp(log_prob - rollout_data.old_log_prob)
 
-                # clipped surrogate loss
-                policy_loss_1 = advantages * ratio
-                policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)
-                policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
+                # # clipped surrogate loss
+                # policy_loss_1 = advantages * ratio
+                # policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)
+                # policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
 
-                # Logging
-                pg_losses.append(policy_loss.item())
-                clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
-                clip_fractions.append(clip_fraction)
+                # # Logging
+                # pg_losses.append(policy_loss.item())
+                # clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
+                # clip_fractions.append(clip_fraction)
 
                 if self.clip_range_vf is None:
                     # No clipping
@@ -306,36 +255,17 @@ class TRPPO(OnPolicyAlgorithm):
                 value_loss = F.mse_loss(rollout_data.returns, values_pred)
                 value_losses.append(value_loss.item())
 
-                # Entropy loss favor exploration
-                if entropy is None:
-                    # Approximate entropy when no analytical form
-                    entropy_loss = -th.mean(-log_prob)
-                else:
-                    entropy_loss = -th.mean(entropy)
+                # # Entropy loss favor exploration
+                # if entropy is None:
+                #     # Approximate entropy when no analytical form
+                #     entropy_loss = -th.mean(-log_prob)
+                # else:
+                #     entropy_loss = -th.mean(entropy)
 
-                entropy_losses.append(entropy_loss.item())
+                # entropy_losses.append(entropy_loss.item())
 
-                # Old value regularization term
-                prob = self.policy.get_distribution(rollout_data.observations).distribution.probs
-                with th.no_grad():
-                    last_env_prob = old_model_policy.policy.get_distribution(rollout_data.observations).distribution.probs
-                    this_env_values_last_policy, _, _ = old_model_value.policy.evaluate_actions(rollout_data.observations, actions)
-                    delta_value_new_environment = this_env_values_last_policy - values.unsqueeze(dim=-1)
+                loss = self.vf_coef * value_loss
 
-                    last_env_values_this_policy, _, _ = new_model_old_env.policy.evaluate_actions(rollout_data.observations, actions)
-                    last_env_values, _, _ = old_model_policy.policy.evaluate_actions(rollout_data.observations, actions)
-                    delta_value_old_environment = last_env_values - last_env_values_this_policy
-
-                    delta_value = 0.5 * delta_value_old_environment + 0.5 * delta_value_new_environment
-
-                    lambd = th.mean(delta_value)
-                    lambd = th.clip(lambd, min=0, max=0.05) * (1e3)
-                transfer_regularization = lambd * F.mse_loss(prob, last_env_prob)
-                lambds.append(lambd.item())
-
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + transfer_regularization
-                transfer_regular_losses.append(transfer_regularization.item())
-                delta_values.append(th.mean(delta_value).item())
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -372,9 +302,6 @@ class TRPPO(OnPolicyAlgorithm):
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)
-        self.logger.record("johnlee_transfer/transfer_regularization_losses", np.mean(transfer_regular_losses))
-        self.logger.record("johnlee_transfer/lambd", np.mean(lambds))
-        self.logger.record("johnlee_transfer/delta_values", np.mean(delta_values))
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
 
