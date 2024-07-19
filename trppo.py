@@ -13,10 +13,11 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedul
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
 from stable_baselines3 import PPO
+from vppo import VPPO
 import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
-old_model_value = None
-old_model_policy = None
+new_model_old_env = None
+old_model = None
 
 
 class TRPPO(OnPolicyAlgorithm):
@@ -85,8 +86,8 @@ class TRPPO(OnPolicyAlgorithm):
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
         env: Union[GymEnv, str],
-        old_model_name_value: str = None,
-        old_model_name_policy: str = None,
+        old_env: Union[GymEnv, str],
+        old_model_name: str = None,
         transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
@@ -174,8 +175,8 @@ class TRPPO(OnPolicyAlgorithm):
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
-        self.old_model_name_value = old_model_name_value
-        self.old_model_name_policy = old_model_name_policy
+        self.old_env = old_env
+        self.old_model_name = old_model_name
 
         if _init_setup_model:
             self._setup_model()
@@ -197,12 +198,41 @@ class TRPPO(OnPolicyAlgorithm):
         """
         Update policy using the currently gathered rollout buffer.
         """
-        global old_model_value
-        global old_model_policy
-        if old_model_value == None:
-            old_model_value = PPO.load(os.path.join("trained_models/", self.old_model_name_value), env=self.env)
-        if old_model_policy == None:
-            old_model_policy = PPO.load(os.path.join("trained_models/", self.old_model_name_policy), env=self.env)
+        global new_model_old_env
+        global old_model
+
+        # Initialize new_model_old_env at the first train()
+        if new_model_old_env == None:
+            from network_structures import ConstantFeatureExtractorCNN
+            policy_kwargs = dict(
+            activation_fn=th.nn.ReLU,
+            net_arch=dict(pi=[], vf=[]),
+            features_extractor_class=ConstantFeatureExtractorCNN,
+            features_extractor_kwargs=dict(features_dim=512),
+            )
+            new_model_old_env = VPPO(
+                "CnnPolicy",
+                self.old_env,
+                device="cuda", 
+                verbose=1,
+                n_steps=512,
+                batch_size=512,
+                n_epochs=4,
+                gamma=0.94,
+                learning_rate=1e-05,
+                tensorboard_log="logs",
+                policy_kwargs=policy_kwargs
+            )
+        # Initialize old_model, also set up the feature extractor of the new_model_old_env
+        if old_model == None:
+            old_model = PPO.load(os.path.join("trained_models/", self.old_model_name), env=self.env)
+            new_model_old_env.policy.features_extractor.constant_feature_extractor.load_state_dict(old_model.policy.features_extractor.state_dict())
+            new_model_old_env.policy.action_net.load_state_dict(old_model.policy.action_net.state_dict())
+
+        # Update the value function of the new policy in the old environment
+        new_model_old_env.learn(4096)
+        input("SUCCESS HERE!")
+
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -280,8 +310,8 @@ class TRPPO(OnPolicyAlgorithm):
                 # Old value regularization term
                 prob = self.policy.get_distribution(rollout_data.observations).distribution.probs
                 with th.no_grad():
-                    last_stage_prob = old_model_policy.policy.get_distribution(rollout_data.observations).distribution.probs
-                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model_value.policy.evaluate_actions(rollout_data.observations, actions)
+                    last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
+                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
                     delta_value = values.unsqueeze(dim=-1) - last_stage_values
                     lambd = th.mean(delta_value)
                     lambd = th.clip(lambd, min=-0.05, max=0) * (-1e3)

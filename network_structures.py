@@ -156,3 +156,21 @@ class WhiteFeatureExtractorCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return observations
+    
+class ConstantFeatureExtractorCNN(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 512):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        self.constant_feature_extractor = CustomFeatureExtractorCNN(observation_space, features_dim)
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        with th.no_grad():
+            output = self.constant_feature_extractor(observations)
+        return output
