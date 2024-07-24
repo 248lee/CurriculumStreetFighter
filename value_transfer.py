@@ -88,7 +88,7 @@ def main():
     "tensorboard_log": "logs",
     "verbose": 1
     }
-    model = VPPO.load('trained_models/ppo_chun_vs_ryu_john_s1_exp2_final.zip', device="cuda", custom_objects=custom_objects, env=env)
+    model = VPPO.load('trained_models/ppo_ryu_vs_sagat_s1_final.zip', device="cuda", custom_objects=custom_objects, env=env)
 
     # input("Press ENTER to continue...")
     # Set the save directory
@@ -108,7 +108,7 @@ def main():
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
-    checkpoint_interval = 31250 * 2# checkpoint_interval * num_envs = total_steps_per_checkpoint
+    checkpoint_interval = 31250 * 4# checkpoint_interval * num_envs = total_steps_per_checkpoint
     ExperimentName = "value_transfer"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
@@ -117,7 +117,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(2000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(4000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,

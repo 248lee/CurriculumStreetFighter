@@ -196,11 +196,11 @@ class VPPO(OnPolicyAlgorithm):
             clip_range_vf = self.clip_range_vf(self._current_progress_remaining)  # type: ignore[operator]
 
         # Freeze the parameters relating to the policy
-        # for name, param in self.policy.named_parameters():
-        #     if not ('value_net' in name):
-        #         param.requires_grad = False
-        #     else:
-        #         param.requires_grad = True
+        for name, param in self.policy.named_parameters():
+            if not ('value_net' in name):
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
 
         entropy_losses = []
         pg_losses, value_losses = [], []
