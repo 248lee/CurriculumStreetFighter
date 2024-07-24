@@ -74,7 +74,7 @@ def transfer_lambd_schedule_linear(initial_value, mid_value, final_value=0.0):
     
     return scheduler
 
-def make_env(game, state, seed=0, enemy=1):
+def make_env(game, state, seed=0):
     def _init():
         env = retro.make(
             game=game, 
@@ -82,7 +82,7 @@ def make_env(game, state, seed=0, enemy=1):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env, enemy=enemy)
+        env = StreetFighterCustomWrapper(env, enemy=1)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -93,8 +93,7 @@ def make_env(game, state, seed=0, enemy=1):
 def main():
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i, enemy=1) for i in range(NUM_ENV)]))
-    old_env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i, enemy=0) for i in range(4)]))
+    env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
     if STAGE == 1:
@@ -145,8 +144,8 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_env,
-            old_model_name="ppo_chun_vs_ryu_john_s1_exp2_final.zip",
+            old_model_name_value="value_transfer_final.zip",
+            old_model_name_policy="ppo_chun_vs_ryu_john_s1_exp2_final.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
