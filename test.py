@@ -29,7 +29,7 @@ MODEL_NAME = r"ppo_chun_vs_ryu_john_punishment_s2_final" # Specify the model fil
 # ppo_ryu_3000000_steps_updated: Near the final overfitted state, almost dominate first round but barely generalizable.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
 
-RANDOM_ACTION = False
+RANDOM_ACTION = True
 NUM_EPISODES = 30 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
 MODEL_DIR = r"trained_models/"
 
@@ -41,7 +41,7 @@ def make_env(game, state):
             use_restricted_actions=retro.Actions.FILTERED,
             obs_type=retro.Observations.IMAGE,
         )
-        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name='Champion.Level12.ChunVSRyu_D7_16.state')
+        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING, load_state_name='Champion_RyuVSSagat_D3_7.state')
         return env
     return _init
 
