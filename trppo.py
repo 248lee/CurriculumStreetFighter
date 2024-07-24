@@ -326,7 +326,7 @@ class TRPPO(OnPolicyAlgorithm):
                     last_env_values, _, _ = old_model_policy.policy.evaluate_actions(rollout_data.observations, actions)
                     delta_value_old_environment = last_env_values - last_env_values_this_policy
 
-                    delta_value = 0.25 * delta_value_old_environment + 0.75 * delta_value_new_environment
+                    delta_value = 0.5 * delta_value_old_environment + 0.5 * delta_value_new_environment
 
                     lambd = th.mean(delta_value)
                     lambd = th.clip(lambd, min=0, max=0.05) * (1e3)
