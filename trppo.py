@@ -13,12 +13,11 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedul
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
 from stable_baselines3 import PPO
-from vppo_newpolicy import VPPON
+from vppo import VPPO
 import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 new_model_old_env = None
 old_model_policy = None
-old_model_value = None
 
 
 class TRPPO(OnPolicyAlgorithm):
@@ -203,7 +202,6 @@ class TRPPO(OnPolicyAlgorithm):
         """
         global new_model_old_env
         global old_model_policy
-        global old_model_value
 
         # Initialize new_model_old_env at the first train()
         if new_model_old_env == None:
@@ -214,7 +212,7 @@ class TRPPO(OnPolicyAlgorithm):
             features_extractor_class=ConstantFeatureExtractorCNN,
             features_extractor_kwargs=dict(features_dim=512),
             )
-            new_model_old_env = VPPON(
+            new_model_old_env = VPPO(
                 "CnnPolicy",
                 self.old_env,
                 device="cuda", 
@@ -239,7 +237,7 @@ class TRPPO(OnPolicyAlgorithm):
         new_model_old_env.policy.action_net.load_state_dict(self.policy.action_net.state_dict())
 
         # Update the value function of the new policy in the old environment
-        new_model_old_env.learn(5120, reset_num_timesteps=False)
+        new_model_old_env.learn(5120)
 
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
