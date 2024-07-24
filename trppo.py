@@ -83,11 +83,6 @@ class TRPPO(OnPolicyAlgorithm):
         "MultiInputPolicy": MultiInputActorCriticPolicy,
     }
 
-    def _excluded_save_params(self) -> th.List[str]:
-        original = super()._excluded_save_params()
-        original.append("old_env")
-        return original
-
     def __init__(
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
