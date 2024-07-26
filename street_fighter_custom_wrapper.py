@@ -71,7 +71,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             if self.enemy == 0:
                 self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D3_' + str(s) + '.state')
             else:
-                self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D4_' + str(s) + '.state')
+                self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D5_' + str(s) + '.state')
         else:
             print("STATE DIR:", ABS_STATE_DIR + self.load_state_name)
             self.env.load_state(ABS_STATE_DIR + self.load_state_name)

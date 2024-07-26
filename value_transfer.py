@@ -66,7 +66,7 @@ def main():
     env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
-    lr_schedule = linear_schedule(1e-4, 5e-5)
+    lr_schedule = linear_schedule(1e-3, 5e-5)
 
     # fine-tune
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
@@ -88,7 +88,7 @@ def main():
     "tensorboard_log": "logs",
     "verbose": 1
     }
-    model = VPPO.load('trained_models/ppo_ryu_vs_sagat_s1_final.zip', device="cuda", custom_objects=custom_objects, env=env)
+    model = VPPO.load('trained_models/ppo_ryu_vs_sagat_s2_12000000_steps.zip', device="cuda", custom_objects=custom_objects, env=env)
 
     # input("Press ENTER to continue...")
     # Set the save directory
@@ -109,7 +109,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 4# checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "value_transfer"
+    ExperimentName = "value_transfer2"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file
@@ -117,7 +117,7 @@ def main():
     log_file_path = os.path.join(save_dir, "training_log.txt")
     print('start training')
     model.learn(
-        total_timesteps=int(4000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+        total_timesteps=int(12000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
         callback=[checkpoint_callback],#, stage_increase_callback]
         progress_bar=True,
         tb_log_name=ExperimentName,
