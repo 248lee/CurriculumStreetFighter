@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch as th
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import gymnasium as gym
+from stable_baselines3.common.preprocessing import get_action_dim, is_image_space, maybe_transpose, preprocess_obs
 
 conv_stage1_kernels = 64
 conv_stage2_kernels = 32
@@ -156,3 +157,22 @@ class WhiteFeatureExtractorCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return observations
+    
+class DVNNetwork(nn.Module):
+    def __init__(self, old_model_name: str, features_dim: int = 512):
+        from stable_baselines3 import PPO
+        super(DVNNetwork, self).__init__()
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        self.feature_extractor = PPO.load("trained_models/" + old_model_name).policy
+        self.batch_norm = nn.BatchNorm1d(features_dim)
+        self.hidden = nn.Sequential(nn.Linear(features_dim, 256), nn.ReLU())
+        self.value = nn.Linear(256, 1)
+    
+    def forward(self, observations):
+        with th.no_grad():
+            feature = self.feature_extractor.extract_features(observations, self.feature_extractor.features_extractor)
+        y = self.batch_norm(feature)
+        y = self.hidden(y)
+        output = self.value(y)
+        return output
