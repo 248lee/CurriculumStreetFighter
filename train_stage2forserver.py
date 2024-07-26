@@ -144,7 +144,8 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="value_transfer2_6000000_steps.zip",
+            old_model_name="ppo_ryu_vs_sagat_s2_12000000_steps.zip",
+            dvn_model_name="DVN_transfer_2000000_steps.zip",
             transfer_lambd=transfer_lambd,
             device="cuda", 
             verbose=1,
@@ -181,7 +182,7 @@ def main():
         param.requires_grad = True
 
     checkpoint_interval = 31250 * 4 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_ryu_vs_sagat_s2_unp_value"
+    ExperimentName = "ppo_ryu_vs_sagat_s2_precise_value"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

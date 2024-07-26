@@ -1,5 +1,6 @@
 from network_structures import CustomFeatureExtractorCNN, Stage2CustomFeatureExtractorCNN, Stage3CustomFeatureExtractorCNN
 from stable_baselines3 import PPO
+from network_structures import DVNNetwork
 import retro
 from street_fighter_custom_wrapper import TransferStreetFighterCustomWrapper, StreetFighterCustomWrapper
 from kernel_operations import john_bilinear
@@ -10,33 +11,39 @@ import numpy as np
 from tqdm import tqdm
 from stable_baselines3.common.preprocessing import preprocess_obs
 
-current_stage = 2
-next_stage = 3
+
+def make_env(game, state):
+    def _init():
+        env = retro.make(
+            game=game, 
+            state=state, 
+            use_restricted_actions=retro.Actions.FILTERED,
+            obs_type=retro.Observations.IMAGE,
+        )
+        env = StreetFighterCustomWrapper(env, reset_round=True, rendering=True, load_state_name='Champion_RyuVSSagat_D5_7.state')
+        return env
+    return _init
+
+
+game = "StreetFighterIISpecialChampionEdition-Genesis"
+env = make_env(game, state="Champion.Level12.RyuVsHonda_7.state")()
 
 if __name__ == '__main__':
-    env = retro.make(
-                game="StreetFighterIISpecialChampionEdition-Genesis", 
-                state="Champion.Level12.RyuVsBison", 
-                use_restricted_actions=retro.Actions.FILTERED, 
-                render_mode='rgb_array'
-            )
-    env = TransferStreetFighterCustomWrapper(env)
-    model = PPO.load('trained_models/ppo_chun_vs_ryu_john_final.zip', env=env)
-    model2 = PPO.load('trained_models/value_transfer_final.zip', env=env)
+    model = PPO.load('trained_models/ppo_ryu_vs_sagat_s2_12000000_steps.zip', env=env)
     policy = model.policy
-    policy2 = model2.policy
+
+    dvn_model = DVNNetwork("ppo_ryu_vs_sagat_s2_12000000_steps").to('cuda')
+    dvn_model.load_state_dict(th.load("trained_models/DVN_transfer_2000000_steps.zip"))
+    dvn_model.eval()
+
     movie_obs = []
     movie_probs = []
     movie_values = []
     movie_action = []
-    from stable_baselines3.common.policies import ActorCriticCnnPolicy
-    from stable_baselines3.common.distributions import BernoulliDistribution
+    obs, _info = env.reset()
+    done = False
     for enemy in range(1):
-        for i in range(32, 33): # 32 episodes
-            if enemy == 0:
-                env.reset(state='Champion.Level12.RyuVsBison_{}.state'.format(i))
-            elif enemy == 1:
-                env.reset(state='Champion.Level12.RyuVsHonda_{}.state'.format(i))
+        for i in range(1, 33): # 32 episodes
             print('BATTLE:', i)
             done = False
             obs, info = env.reset()
@@ -46,15 +53,13 @@ if __name__ == '__main__':
                     action, _states = model.predict(obs)
                     obs_tensor, _ = policy.obs_to_tensor(obs)
                     prob = policy.get_distribution(obs_tensor).distribution.probs
-                    prob2 = policy2.get_distribution(obs_tensor).distribution.probs
                     prob = th.squeeze(prob, 0)  # shape [1, 12] -> [12]
                     value = th.squeeze(policy.predict_values(obs_tensor), 0)
-                    value2 = th.squeeze(policy2.predict_values(obs_tensor), 0)
+                    value2 = th.squeeze(dvn_model(obs_tensor))
                     movie_probs.append(prob)
                     movie_values.append(value)
 
                     print(prob)
-                    print(prob2)
                     print(value)
                     print(value2)
                     input("=============================================")

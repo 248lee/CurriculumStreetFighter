@@ -13,9 +13,11 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedul
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
 from stable_baselines3 import PPO
+from network_structures import DVNNetwork
 import os
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 old_model = None
+dvn_model = None
 
 
 class TRPPO(OnPolicyAlgorithm):
@@ -85,6 +87,7 @@ class TRPPO(OnPolicyAlgorithm):
         policy: Union[str, Type[ActorCriticPolicy]],
         env: Union[GymEnv, str],
         old_model_name: str = None,
+        dvn_model_name: str = None,
         transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
@@ -173,6 +176,7 @@ class TRPPO(OnPolicyAlgorithm):
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
         self.old_model_name = old_model_name
+        self.dvn_model_name = dvn_model_name
 
         if _init_setup_model:
             self._setup_model()
@@ -197,6 +201,14 @@ class TRPPO(OnPolicyAlgorithm):
         global old_model
         if old_model == None:
             old_model = PPO.load(os.path.join("trained_models/", self.old_model_name), env=self.env)
+            old_model.policy.set_training_mode(False)
+
+        global dvn_model
+        if dvn_model == None:
+            dvn_model = DVNNetwork(self.old_model_name).to('cuda')
+            dvn_model.load_state_dict(th.load("trained_models/" + self.dvn_model_name))
+            dvn_model.eval()
+
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -275,8 +287,11 @@ class TRPPO(OnPolicyAlgorithm):
                 prob = self.policy.get_distribution(rollout_data.observations).distribution.probs
                 with th.no_grad():
                     last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
-                    last_stage_values, last_stage_log_prob, last_stage_entropy = old_model.policy.evaluate_actions(rollout_data.observations, actions)
+                    last_stage_values = dvn_model(rollout_data.observations)
                     delta_value = values.unsqueeze(dim=-1) - last_stage_values
+                    print(values.unsqueeze(dim=-1).shape)
+                    print(last_stage_values.shape)
+                    input()
                     lambd = th.mean(delta_value)
                     lambd = th.clip(lambd, min=-0.05, max=0) * (-1e2)
                 transfer_regularization = lambd * F.mse_loss(prob, last_stage_prob)
