@@ -69,8 +69,12 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             s = random.randint(1, 20)
             if self.enemy == 0:
                 self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D3_' + str(s) + '.state')
-            else:
+            elif self.enemy == 1:
+                self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D4_' + str(s) + '.state')
+            elif self.enemy == 2:
                 self.env.load_state(ABS_STATE_DIR + 'Champion_RyuVSSagat_D5_' + str(s) + '.state')
+            else:
+                self.env.load_state(ABS_STATE_DIR + 'WRONG ENEMY.state')
         else:
             print("STATE DIR:", ABS_STATE_DIR + self.load_state_name)
             self.env.load_state(ABS_STATE_DIR + self.load_state_name)
@@ -147,12 +151,14 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             custom_done = False
         # If the fighting is still going on
         else:
-            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * 2.5269
-            if custom_reward == 0:  # and info['agent_y'] >= 150:
-                if info['agent_y'] >= 150:
-                    custom_reward = 1
-                else:
-                    custom_reward = 2
+            if info['agent_y'] <= 180:
+                damage_faced_reward_multiplier = 5.0538
+            else:
+                damage_faced_reward_multiplier = 2.5269
+            custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health) * damage_faced_reward_multiplier
+            
+            if custom_reward == 0 and info['isDown'] == 0:
+                custom_reward = 2
             self.prev_player_health = curr_player_health
             self.prev_oppont_health = curr_oppont_health
             custom_done = False
