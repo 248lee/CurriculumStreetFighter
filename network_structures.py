@@ -41,10 +41,12 @@ class CustomFeatureExtractorCNN(BaseFeaturesExtractor):
                 th.as_tensor(observation_space.sample()[None]).float()
             ))).shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.BatchNorm1d(n_flatten), nn.Linear(n_flatten, features_dim), nn.ReLU())
 
         with th.no_grad():
+            self.eval()
             self.latent_output_shape = self.forward(th.as_tensor(observation_space.sample()[None]).float()).shape
+            self.train()
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(self.cnn_stage1(self.avg(observations))))
@@ -83,10 +85,12 @@ class Stage2CustomFeatureExtractorCNN(BaseFeaturesExtractor):
                 th.as_tensor(observation_space.sample()[None]).float()
             ))).shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.BatchNorm1d(n_flatten), nn.Linear(n_flatten, features_dim), nn.ReLU())
 
         with th.no_grad():
+            self.eval()
             self.latent_output_shape = self.forward(th.as_tensor(observation_space.sample()[None]).float()).shape
+            self.train()
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(self.cnn_stage1(self.avg(observations))))
