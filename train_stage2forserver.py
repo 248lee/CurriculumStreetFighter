@@ -144,9 +144,8 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="ppo_ryu_vs_sagat_s2_12000000_steps.zip",
-            dvn_model_name="DVN_transfer_2000000_steps.zip",
-            transfer_lambd=transfer_lambd,
+            old_model_name="ppo_ryu_vs_sagat_jdd_punish_s1_final.zip",
+            dvn_model_name="DVN_transfer_final.zip",
             device="cuda", 
             verbose=1,
             n_steps=512,

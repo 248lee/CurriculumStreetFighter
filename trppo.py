@@ -88,7 +88,6 @@ class TRPPO(OnPolicyAlgorithm):
         env: Union[GymEnv, str],
         old_model_name: str = None,
         dvn_model_name: str = None,
-        transfer_lambd: Union[float, Schedule] = 0.25,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
         batch_size: int = 64,
@@ -171,7 +170,6 @@ class TRPPO(OnPolicyAlgorithm):
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.clip_range = clip_range
-        self.transfer_lambd = transfer_lambd
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
@@ -186,7 +184,6 @@ class TRPPO(OnPolicyAlgorithm):
 
         # Initialize schedules for policy/value clipping
         self.clip_range = get_schedule_fn(self.clip_range)
-        self.transfer_lambd = get_schedule_fn(self.transfer_lambd)
         if self.clip_range_vf is not None:
             if isinstance(self.clip_range_vf, (float, int)):
                 assert self.clip_range_vf > 0, "`clip_range_vf` must be positive, " "pass `None` to deactivate vf clipping"
