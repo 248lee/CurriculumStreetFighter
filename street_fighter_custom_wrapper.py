@@ -64,7 +64,6 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         return result
 
     def reset(self, seed=None):
-        observation, info = self.env.reset()
         random.seed(seed)
         if self.load_state_name == "":
             s = random.randint(1, 20)
@@ -85,6 +84,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
         
         # Clear the frame stack and add the first observation [num_frames] times
         self.frame_stack.clear()
+        observation, info = self.env.reset()
         for _ in range(self.num_frames):
             # new_observation = pan_int_obs(observation)
             # self.frame_stack.append(new_observation)

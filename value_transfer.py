@@ -63,7 +63,7 @@ def make_env(game, state, seed=0):
 def main():
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
+    env = (SubprocVecEnv([make_env(game, state=None)]))
 
     # Set linear schedule for learning rate
     lr_schedule = linear_schedule(1e-4, 1e-5)
