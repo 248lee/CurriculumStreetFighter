@@ -207,7 +207,7 @@ class DVN(OffPolicyAlgorithm):
         # Update learning rate according to schedule
         self._update_learning_rate(value_optimizer)
 
-        losses = []
+        log_losses = []
         for _ in range(gradient_steps):
             # Sample replay buffer
             replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)  # type: ignore[union-attr]
@@ -223,7 +223,7 @@ class DVN(OffPolicyAlgorithm):
 
             # Compute Huber loss (less sensitive to outliers)
             loss = F.smooth_l1_loss(current_v_values, target_v_values)
-            losses.append(np.log(loss.item()))
+            log_losses.append(np.log(loss.item()))
 
             value_optimizer.zero_grad()
             loss.backward()
@@ -235,7 +235,7 @@ class DVN(OffPolicyAlgorithm):
         self._n_updates += gradient_steps
 
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
-        self.logger.record("train/loss", np.mean(losses))
+        self.logger.record("train/log_loss", np.mean(log_losses))
 
     def collect_rollouts(
         self,

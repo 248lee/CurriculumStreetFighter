@@ -51,7 +51,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env, enemy=1)
+        env = StreetFighterCustomWrapper(env, enemy=2)
         env = Monitor(env)
         env.seed(seed)
         env.action_space = gym.spaces.Discrete(1)
@@ -63,7 +63,7 @@ def make_env(game, state, seed=0):
 def main():
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = (SubprocVecEnv([make_env(game, state=None)]))
+    env = (SubprocVecEnv([make_env(game, state=None, seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
     lr_schedule = linear_schedule(1e-4, 1e-5)
@@ -72,7 +72,7 @@ def main():
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     model = DVN(
-        "ppo_ryu_vs_sagat_jdd_punish_s1_final",
+        "ppo_ryu_vs_sagat_s2_lambd_by_return_6000000_steps",
         "CnnPolicy",
         env,
         lr_schedule,
@@ -101,8 +101,8 @@ def main():
 
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
-    checkpoint_interval = 31250  # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "DVN_transfer"
+    checkpoint_interval = 1000000  # checkpoint_interval * num_envs = total_steps_per_checkpoint
+    ExperimentName = "value_of_new_policy"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

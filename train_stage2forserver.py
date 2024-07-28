@@ -82,7 +82,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env, enemy=1)
+        env = StreetFighterCustomWrapper(env, enemy=2)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -93,7 +93,7 @@ def make_env(game, state, seed=0):
 def main():
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = (SubprocVecEnv([make_env(game, state=None)]))
+    env = (SubprocVecEnv([make_env(game, state=None, seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
     if STAGE == 1:
@@ -144,7 +144,7 @@ def main():
         model = TRPPO(
             "CnnPolicy",
             env,
-            old_model_name="ppo_ryu_vs_sagat_jdd_punish_s1_final.zip",
+            old_model_name="ppo_ryu_vs_sagat_jdd_punish_s1_final",
             dvn_model_name="DVN_transfer_final.zip",
             device="cuda", 
             verbose=1,

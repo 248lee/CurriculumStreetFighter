@@ -29,11 +29,11 @@ game = "StreetFighterIISpecialChampionEdition-Genesis"
 env = make_env(game, state="Champion.Level12.RyuVsHonda_7.state")()
 
 if __name__ == '__main__':
-    model = PPO.load('trained_models/ppo_ryu_vs_sagat_s2_12000000_steps.zip', env=env)
+    model = PPO.load('trained_models/ppo_ryu_vs_sagat_jdd_punish_s1_final.zip', env=env)
     policy = model.policy
 
-    dvn_model = DVNNetwork("ppo_ryu_vs_sagat_s2_12000000_steps").to('cuda')
-    dvn_model.load_state_dict(th.load("trained_models/DVN_transfer_2000000_steps.zip"))
+    dvn_model = DVNNetwork("ppo_ryu_vs_sagat_jdd_punish_s1_final").to('cuda')
+    dvn_model.load_state_dict(th.load("trained_models/DVN_transfer_final.zip"))
     dvn_model.eval()
 
     movie_obs = []
@@ -62,7 +62,8 @@ if __name__ == '__main__':
                     print(prob)
                     print(value)
                     print(value2)
-                    input("=============================================")
+                    if value2.item() < -10:
+                        input()
                 # print(movie_probs[-1].shape)
                 # input("hello there")
                 obs_tensor = th.squeeze(obs_tensor, 0)  # reduce the dimension
