@@ -72,7 +72,7 @@ def main():
     # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     model = DVN(
-        "ppo_ryu_vs_sagat_s2_lambd_by_return_6000000_steps",
+        "ppo_ryu_vs_sagat_jdd_punish_s1_final",
         "CnnPolicy",
         env,
         lr_schedule,
@@ -102,7 +102,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 1000000  # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "value_of_new_policy"
+    ExperimentName = "DVN_transfer"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

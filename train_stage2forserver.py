@@ -108,7 +108,7 @@ def main():
     if STAGE == 1:
         clip_range_schedule = linear_schedule(0.15, 0.02)
     elif STAGE == 2:
-        clip_range_schedule = linear_schedule(0.15, 0.02)
+        clip_range_schedule = linear_schedule(0.035, 0.02)
         transfer_lambd = transfer_lambd_schedule_exp(50, -15, 0)
 
     # fine-tune

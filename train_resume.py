@@ -29,7 +29,7 @@ NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
-resume_model_name = 'ppo_chun_vs_ryu_john_final.zip'
+resume_model_name = 'ppo_ryu_vs_sagat_jdd_punish_s1_final.zip'
 
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
@@ -52,7 +52,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             render_mode='rgb_array'  
         )
-        env = StreetFighterCustomWrapper(env, enemy=1)
+        env = StreetFighterCustomWrapper(env, enemy=2)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -63,14 +63,14 @@ def make_env(game, state, seed=0):
 def main():
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = (SubprocVecEnv([make_env(game, state="Champion.Level12.RyuVsBison", seed=i) for i in range(NUM_ENV)]))
+    env = (SubprocVecEnv([make_env(game, state=None, seed=i) for i in range(NUM_ENV)]))
 
     # Set linear schedule for learning rate
     lr_schedule = linear_schedule(1e-4, 4.5e-7)
 
 
     # Set linear scheduler for clip range
-    clip_range_schedule = linear_schedule(0.15, 0.02)
+    clip_range_schedule = linear_schedule(0.035, 0.02)
 
     # fine-tune
     # clip_range_schedule = linear_schedule(0.075, 0.025)
@@ -111,7 +111,7 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 * 12 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    ExperimentName = "ppo_chun_please_very_low_even_lowest"
+    ExperimentName = "ppo_ryu_vs_sagat_please_very_low_even_lowest"
     checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix=ExperimentName)
 
     # Writing the training logs from stdout to a file

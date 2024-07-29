@@ -205,9 +205,7 @@ class TRPPO(OnPolicyAlgorithm):
             dvn_model = DVNNetwork(self.old_model_name).to('cuda')
             dvn_model.load_state_dict(th.load("trained_models/" + self.dvn_model_name))
             dvn_model.eval()
-        dvn_model2 = DVNNetwork(self.old_model_name).to('cuda')
-        dvn_model2.load_state_dict(th.load("trained_models/" + "value_of_new_policy_final.zip"))
-        dvn_model2.eval()
+
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Update optimizer learning rate
@@ -288,11 +286,7 @@ class TRPPO(OnPolicyAlgorithm):
                     last_stage_prob = old_model.policy.get_distribution(rollout_data.observations).distribution.probs
                     last_stage_values = dvn_model(rollout_data.observations)
                     delta_value = rollout_data.returns.unsqueeze(dim=-1) - last_stage_values
-                    delta_value2 = dvn_model2(rollout_data.observations) - last_stage_values
-                    if th.mean(delta_value2).item() < 0:
-                        print(th.mean(delta_value), th.mean(delta_value2))
-                        input()
-                    lambd = th.mean(delta_value)
+                    lambd = th.mean(delta_value) + 3e-3
                     lambd = th.clip(lambd, min=-0.05, max=0) * (-1e2)
                 transfer_regularization = lambd * F.mse_loss(prob, last_stage_prob)
                 lambds.append(lambd.item())
